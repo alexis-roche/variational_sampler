@@ -29,5 +29,4 @@ def test1d_with_reflection():
 def test2d_basic():
     s = Sample(target, np.zeros(2), np.eye(2), ndraws=10)
     assert_equal(s.x.shape, (2, 10))
-    print s.p.shape
     assert_equal(s.p.size, 10)

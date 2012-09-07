@@ -1,5 +1,5 @@
 """
-Independence sampling, annealed independence sampling.
+Independence sampling
 """
 from time import time
 import numpy as np
@@ -53,6 +53,6 @@ class Sample(object):
         self.x = self.kernel.sample(ndraws=ndraws)
         if self.reflect:
             self.x = reflect_sample(self.x)
-        self.p = self.target(self.x)
+        self.p = self.target(self.x).squeeze()
 
 
