@@ -4,11 +4,7 @@ A class to represent unnormalized Gaussian distributions.
 
 import numpy as np
 
-from .numlib import safe_eigh, force_tiny
-
-
-def hdot(x, A):
-    return np.dot(x, np.dot(A, x))
+from .numlib import (hdot, force_tiny, safe_eigh)
 
 
 def parameter_dimension(d):
@@ -80,12 +76,8 @@ class Gaussian(object):
 
         # If theta is provided, ignore other parameters
         if not theta == None:
-            dim = variable_dimension(theta.size)
-            self._set_dimension_parameters(dim)
             self._set_theta(theta)
         else:
-            dim = m.size
-            self._set_dimension_parameters(dim)
             self._set_moments(m, V, K, Z)
 
     def _set_dimension_parameters(self, dim):
@@ -101,10 +93,11 @@ class Gaussian(object):
         # self._Iu, self._Ju = np.where((I - J) <= 0)
 
     def _set_moments(self, m, V, K=None, Z=None):
-
-        # Mean and variance
         m = np.asarray(m)
         dim = m.size
+        self._set_dimension_parameters(dim)
+
+        # Mean and variance
         m = np.reshape(m, (dim,))
         V = np.reshape(np.asarray(V), (dim, dim))
         self._dim = dim
@@ -154,6 +147,9 @@ class Gaussian(object):
         """
         Convert new theta back into K, m, V
         """
+        theta = np.asarray(theta)
+        dim = variable_dimension(theta.size)
+        self._set_dimension_parameters(dim)
         invV = theta_to_invV(theta[0:self._dim2])
         abs_s, sign_s, P = safe_eigh(invV)
         self._invV = invV
@@ -208,63 +204,3 @@ class Gaussian(object):
     invV = property(_get_invV)
     sqrtV = property(_get_sqrtV)
     theta = property(_get_theta, _set_theta)
-
-
-class GaussianMixture(object):
-
-    def __init__(self, weights, gaussians):
-        """
-        centers: array of shape (d, N)
-        weights: array of shape (N,)
-        V: componentwise variance matrix, array of shape (d,d)
-        """
-        # Dimension
-        dim = gaussians[0].m.size
-        self._dim = dim
-        self._weights = np.asarray(weights)
-        self._gaussians = gaussians
-        self._compute_moments()
-
-    def _compute_moments(self):
-
-        Z = 0.0
-        m = np.zeros(self._dim)
-        V = np.zeros((self._dim, self._dim))
-        for w, g in zip(self._weights, self._gaussians):
-            Z += w * g.Z
-            m += w * g.Z * g.m
-            V += w * g.Z * (g.V + np.dot(g.m, g.m.T))
-
-        Z_safe = force_tiny(Z)
-        m /= Z_safe
-        V = V / Z_safe - np.dot(m, m.T)
-        self._Z = Z
-        self._m = m
-        self._V = V
-
-    def __call__(self, xs):
-        """
-        Sample q(x) at specified points.
-        xs must be two-dimensional with shape[0] equal to self.dim.
-        """
-        ret = np.zeros(xs.shape[1])
-        for w, g in zip(self._weights, self._gaussians):
-            ret += w * g(xs)
-        return ret
-
-    def _get_dim(self):
-        return self._dim
-
-    def _get_Z(self):
-        return self._Z
-
-    def _get_m(self):
-        return self._m
-
-    def _get_V(self):
-        return self._V
-
-    dim = property(_get_dim)
-    m = property(_get_m)
-    V = property(_get_V)
-    Z = property(_get_Z)

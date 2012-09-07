@@ -18,6 +18,10 @@ def force_tiny(x):
     return np.maximum(x, TINY)
 
 
+def hdot(x, A):
+    return np.dot(x, np.dot(A, x))
+
+
 def safe_eigh(A):
     s, P = eigh(A)
     sign_s = 2. * (s >= 0) - 1
