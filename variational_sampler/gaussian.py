@@ -7,14 +7,6 @@ import numpy as np
 from .numlib import (hdot, force_tiny, safe_eigh)
 
 
-def parameter_dimension(d):
-    return 1 + d + (d * (d + 1)) / 2
-
-
-def variable_dimension(dim):
-    return int(-1.5 + np.sqrt(.25 + 2 * dim))
-
-
 def Z_to_K(Z, dim, detV):
     return Z * force_tiny(detV) ** (-.5)\
         * (2 * np.pi) ** (-.5 * dim)
@@ -62,6 +54,14 @@ def expand_parameter(theta, P):
     print theta2
 
     return np.concatenate((theta2, theta1, np.array((theta0,))))
+
+
+def _param_dim(d):
+    return 1 + d + (d * (d + 1)) / 2
+
+
+def _sample_dim(dim):
+    return int(-1.5 + np.sqrt(.25 + 2 * dim))
 
 
 class Gaussian(object):
@@ -122,6 +122,9 @@ class Gaussian(object):
     def _get_dim(self):
         return self._dim
 
+    def _get_param_dim(self):
+        return _param_dim(self._dim)
+
     def _get_m(self):
         return self._m
 
@@ -148,7 +151,7 @@ class Gaussian(object):
         Convert new theta back into K, m, V
         """
         theta = np.asarray(theta)
-        dim = variable_dimension(theta.size)
+        dim = _sample_dim(theta.size)
         self._set_dimension_parameters(dim)
         invV = theta_to_invV(theta[0:self._dim2])
         abs_s, sign_s, P = safe_eigh(invV)
@@ -197,6 +200,7 @@ class Gaussian(object):
         return (self._m + xs.T).T  # preserves shape
 
     dim = property(_get_dim)
+    param_dim = property(_get_param_dim)
     K = property(_get_K)
     m = property(_get_m)
     V = property(_get_V)
