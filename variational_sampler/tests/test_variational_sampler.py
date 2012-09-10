@@ -2,7 +2,8 @@ import numpy as np
 from nose.tools import assert_equal, assert_almost_equal
 from numpy.testing import assert_array_almost_equal
 
-from ..variational_sampler import VariationalSampler
+from ..variational_sampler import (VariationalSampler,
+                                   DirectSampler)
 
 
 def target1d(x):
@@ -13,14 +14,24 @@ def target(x):
     return np.exp(-.5 * np.sum(x ** 2, 0))
 
 
-def test1d_basic():
-    vs = VariationalSampler(target1d, 0, 1, ndraws=10)
-    g = vs.fit()
-    print (g.K, g.m, g.V)
+def _test_basic(vs):
+    print vs.theta
+    print vs.fit
+    print vs.loc_fit
+    print vs.sigma1
+    print vs.sigma2
+    print vs.kl_error
 
+def test1d_vs_basic():
+    _test_basic(VariationalSampler(target1d, 0, 1, ndraws=10))
 
-def test2d_basic():
-    vs = VariationalSampler(target, np.zeros(2), np.eye(2), ndraws=50)
-    g = vs.fit()
-    print (g.K, g.m, g.V)
+def test2d_vs_basic():
+    _test_basic(VariationalSampler(target, np.zeros(2), np.eye(2), ndraws=50))
+
+def test1d_ds_basic():
+    _test_basic(DirectSampler(target1d, 0, 1, ndraws=10))
+
+def test2d_ds_basic():
+    _test_basic(DirectSampler(target, np.zeros(2), np.eye(2), ndraws=50))
+
 

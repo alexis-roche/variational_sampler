@@ -199,6 +199,30 @@ class Gaussian(object):
         xs = np.dot(self._sqrtV, np.random.normal(size=[self._dim, ndraws]))
         return (self._m + xs.T).T  # preserves shape
 
+    def kl_div(self, other):
+        """
+        Return the kl divergence D(self, other) where other is another
+        Gaussian instance.
+        """
+        dm = self.m - other.m
+        dV = np.dot(other.invV, self.V)
+        err = -np.log(force_tiny(np.linalg.det(dV)))
+        err += np.sum(np.diag(dV)) - dm.size
+        err += np.dot(dm.T, np.dot(other.invV, dm))
+        err = np.maximum(.5 * err, 0.0)
+        if np.isinf(other.Z):
+            return np.inf
+        z_err = np.maximum(self.Z * np.log(self.Z / force_tiny(other.Z))
+                           + other.Z - self.Z, 0.0)
+        return self.Z * err + z_err
+
+    def __str__(self):
+        s = 'Gaussian distribution with parameters:\n'
+        s += str(self.Z) + '\n'
+        s += str(self.m) + '\n'
+        s += str(self.V) + '\n'
+        return s
+
     dim = property(_get_dim)
     param_dim = property(_get_param_dim)
     K = property(_get_K)
