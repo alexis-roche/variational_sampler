@@ -1,6 +1,7 @@
+from time import time
 import numpy as np
 
-from .numlib import minimize
+from .numlib import minimize, force_tiny
 from .sampling import Sample
 from .gaussian import Gaussian
 
@@ -23,6 +24,7 @@ class DirectFit(object):
         self._init_from_sample(S)
 
     def _init_from_sample(self, S):
+        t0 = time()
         self.sample = S
         self.dim = S.x.shape[0]
         self.npts = S.x.shape[1]
@@ -32,6 +34,7 @@ class DirectFit(object):
 
         # Perform fit
         self._do_fitting()
+        self.time = time() - t0
 
     def _do_fitting(self):
         F = self._cache['F']
@@ -81,16 +84,17 @@ class DirectFit(object):
 
 class VariationalFit(object):
     
-    def __init__(self, S, maxiter=None, minimizer='cg'):
+    def __init__(self, S, maxiter=None, minimizer='newton'):
         """
         Variational sampler object.
         """
-        self._init_from_sample(S, maxiter=maxiter, minimizer=minimizer)
+        self._init_from_sample(S, maxiter, minimizer)
 
-    def _init_from_sample(self, S, maxiter=None, minimizer='cg'):
+    def _init_from_sample(self, S, maxiter, minimizer):
         """
         Init object given a sample instance.
         """
+        t0 = time()
         self.sample = S
         self.dim = S.x.shape[0]
         self.npts = S.x.shape[1]
@@ -107,6 +111,7 @@ class VariationalFit(object):
 
         # Perform fitting
         self._do_fitting(maxiter, minimizer)
+        self.time = time() - t0
 
     def _udpate_fit(self, theta):
         """
@@ -226,8 +231,8 @@ class DirectSampler(DirectFit):
 
 class VariationalSampler(VariationalFit):
     def __init__(self, target, ms, Vs, ndraws=None, reflect=False,
-                 maxiter=None, minimizer='cg'):
+                 maxiter=None, minimizer='newton'):
         S = Sample(target, ms, Vs,
                    ndraws=ndraws,
                    reflect=reflect)
-        self._init_from_sample(S, maxiter=maxiter, minimizer=minimizer)
+        self._init_from_sample(S, maxiter, minimizer)

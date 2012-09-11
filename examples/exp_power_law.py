@@ -4,22 +4,8 @@ from variational_sampler import (VariationalFit,
                                  DirectFit,
                                  Gaussian,
                                  Sample)
+from variational_sampler.toy_examples import ExponentialPowerLaw
 from scipy.special.orthogonal import h_roots
-from scipy.special import gamma
-
-
-class ExponentialPowerLaw(object):
-    def __init__(self, alpha=np.sqrt(2), beta=2, Z=1):
-        self.alpha = float(alpha)
-        self.beta = float(beta)
-        self.Z = float(Z)
-        self.m = 0
-        self.V = (self.alpha ** 2) * \
-            gamma(3 / self.beta) / gamma(1 / self.beta)
-        self.K = self.Z * (self.beta / (2 * self.alpha * gamma(1 / self.beta)))
-        
-    def __call__(self, x):
-        return self.K * np.exp(-np.abs(x / self.alpha) ** self.beta)
 
 
 def gauss_hermite(target, h2, npts):
@@ -32,7 +18,7 @@ def gauss_hermite(target, h2, npts):
     return Gaussian(m, V, Z=Z)
 
 
-BETA = 1.2
+BETA = 1.5
 NPTS = 20
 
 target = ExponentialPowerLaw(beta=BETA)
@@ -45,10 +31,11 @@ ds = DirectFit(s)
 gs_loc_fit = gauss_hermite(target, h2, 250)
 gh_loc_fit = gauss_hermite(target, h2, NPTS)
 
-for m, f in zip(('VS', 'DS', 'GH'),
-                (vs.loc_fit, ds.loc_fit, gh_loc_fit)):
-     err = gs_loc_fit.kl_div(f)
-     print ('Error for %s: %f' % (m, err))
+print ('Error for VS: %f (expected: %f)'\
+           % (gs_loc_fit.kl_div(vs.loc_fit), vs.kl_error))
+print ('Error for DS: %f (expected: %f)'\
+           % (gs_loc_fit.kl_div(ds.loc_fit), ds.kl_error))
+print ('Error for GH: %f' % gs_loc_fit.kl_div(gh_loc_fit))
 
 xs = vs.sample.x
 xmax = int(np.max(np.abs(xs.squeeze()))) + 1
