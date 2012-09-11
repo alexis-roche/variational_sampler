@@ -56,10 +56,6 @@ def expand_parameter(theta, P):
     return np.concatenate((theta2, theta1, np.array((theta0,))))
 
 
-def _param_dim(d):
-    return 1 + d + (d * (d + 1)) / 2
-
-
 def _sample_dim(dim):
     return int(-1.5 + np.sqrt(.25 + 2 * dim))
 
@@ -80,29 +76,26 @@ class Gaussian(object):
         else:
             self._set_moments(m, V, K, Z)
 
-    def _set_dimension_parameters(self, dim):
+    def _set_dimensions(self, dim):
         """
         Set dimensional parameters: np (number of parameters), dim2
         (number of second-order parameters)
         """
         self._dim = dim
         self._dim2 = (dim * (dim + 1)) / 2
-        self._np = self._dim2 + dim + 1
-        # Useful arrays for indexing
-        # I, J = np.mgrid[0:dim, 0:dim]
-        # self._Iu, self._Ju = np.where((I - J) <= 0)
+        self._param_dim = self._dim2 + dim + 1
 
     def _set_moments(self, m, V, K=None, Z=None):
         m = np.asarray(m)
         dim = m.size
-        self._set_dimension_parameters(dim)
+        self._set_dimensions(dim)
 
         # Mean and variance
-        m = np.reshape(m, (dim,))
-        V = np.reshape(np.asarray(V), (dim, dim))
+        m = np.nan_to_num(np.reshape(m, (dim,)))
+        V = np.nan_to_num(np.reshape(np.asarray(V), (dim, dim)))
         self._dim = dim
-        self._m = np.nan_to_num(m)
-        self._V = np.nan_to_num(V)
+        self._m = m
+        self._V = V
 
         # Compute the inverse and the square root of the variance
         # matrix
@@ -123,7 +116,7 @@ class Gaussian(object):
         return self._dim
 
     def _get_param_dim(self):
-        return _param_dim(self._dim)
+        return self._param_dim
 
     def _get_m(self):
         return self._m
@@ -143,7 +136,7 @@ class Gaussian(object):
     def _get_theta(self):
         theta2 = invV_to_theta(self._invV)
         theta1 = np.dot(self._invV, self._m)
-        theta0 = np.log(self._K) - .5 * hdot(self._m, self._invV)
+        theta0 = np.log(self._K) - .5 * np.dot(self._m, theta1)
         return np.concatenate((theta2, theta1, np.array((theta0,))))
 
     def _set_theta(self, theta):
@@ -152,7 +145,7 @@ class Gaussian(object):
         """
         theta = np.asarray(theta)
         dim = _sample_dim(theta.size)
-        self._set_dimension_parameters(dim)
+        self._set_dimensions(dim)
         invV = theta_to_invV(theta[0:self._dim2])
         abs_s, sign_s, P = safe_eigh(invV)
         self._invV = invV
@@ -177,7 +170,7 @@ class Gaussian(object):
         """
         ys = (xs.T - self._m).T
         u2 = np.sum(ys * np.dot(self._invV, ys), 0)
-        return force_tiny(self._K * np.exp(-.5 * u2))
+        return self._K * np.exp(-.5 * u2)
 
     def copy(self):
         return Gaussian(self._m, self._V, self._K)
@@ -218,9 +211,9 @@ class Gaussian(object):
 
     def __str__(self):
         s = 'Gaussian distribution with parameters:\n'
-        s += str(self.Z) + '\n'
-        s += str(self.m) + '\n'
-        s += str(self.V) + '\n'
+        s += str(self._get_Z()) + '\n'
+        s += str(self._m) + '\n'
+        s += str(self._V) + '\n'
         return s
 
     dim = property(_get_dim)
@@ -229,6 +222,87 @@ class Gaussian(object):
     m = property(_get_m)
     V = property(_get_V)
     Z = property(_get_Z)
+    invV = property(_get_invV)
+    sqrtV = property(_get_sqrtV)
+    theta = property(_get_theta, _set_theta)
+
+
+
+class FactorGaussian(Gaussian):
+
+    def _set_dimensions(self, dim):
+        self._dim = dim
+        self._param_dim = 2 * dim + 1
+
+    def _set_moments(self, m, V, K=None, Z=None):
+        m = np.asarray(m)
+        dim = m.size
+        self._set_dimensions(dim)
+
+        # Mean and variance
+        m = np.nan_to_num(np.reshape(m, (dim,)))
+        V = np.nan_to_num(np.reshape(V, (dim,)))
+        self._dim = dim
+        self._m = m
+        self._V = V
+        self._invV = np.nan_to_num(1 / self._V)
+        self._detV = np.prod(V)
+
+        # Normalization constant
+        if not K == None:
+            self._K = float(K)
+        else:
+            if Z == None:
+                Z = 1.0
+            self._K = Z_to_K(Z, self._dim, self._detV)
+        
+    def _get_V(self):
+        return np.diag(self._V)
+
+    def _get_invV(self):
+        return np.diag(self._invV)
+
+    def _get_sqrtV(self):
+        return np.diag(np.sqrt(np.abs(self._V)))
+
+    def _get_theta(self):
+        invV = np.nan_to_num(1 / self._V)
+        theta2 = -.5 * invV
+        theta1 = invV * self._m
+        theta0 = np.log(self._K) - .5 * np.dot(self._m, theta1)
+        return np.concatenate((theta2, theta1, np.array((theta0,))))
+
+    def _set_theta(self, theta):
+        theta = np.asarray(theta)
+        dim = (theta.size - 1) / 2
+        self._set_dimensions(dim)
+        invV = -2 * theta[0:self._dim]
+        self._invV = invV
+        self._V = np.nan_to_num(1 / invV)
+        self._m = self._V * theta[self._dim:-1]
+        self._K = np.exp(theta[-1] + .5 * np.dot(self._m, invV * self._m))
+        self._detV = np.prod(self._V)
+
+    def __call__(self, xs):
+        ys = (xs.T - self._m).T
+        u2 = np.sum(self._invV * (ys ** 2).T, 0)
+        return self._K * np.exp(-.5 * u2)
+
+    def copy(self):
+        return Gaussian(self._m, self._V, self._K)
+
+    def sample(self, ndraws=1):
+        xs = self._get_sqrtV() * np.random.normal(size=[self._dim, ndraws])
+        return (self._m + xs.T).T  # preserves shape
+
+    def __str__(self):
+        s = 'Factored Gaussian distribution with parameters:\n'
+        s += str(self._get_Z()) + '\n'
+        s += str(self._m) + '\n'
+        s += 'diag(' + str(self._V) + ')\n'
+        return s
+
+    V = property(_get_V)
     invV = property(_get_invV)
     sqrtV = property(_get_sqrtV)
     theta = property(_get_theta, _set_theta)
