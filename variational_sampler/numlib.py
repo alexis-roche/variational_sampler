@@ -6,6 +6,7 @@ from time import time
 from warnings import warn
 import numpy as np
 from scipy.linalg import cho_factor, cho_solve, eigh
+from scipy.optimize import fmin_cg, fmin_ncg, fmin_bfgs
 
 dinfo = np.finfo(np.double)
 TINY = dinfo.tiny
@@ -81,9 +82,7 @@ class SteepestDescent(object):
 
             # Termination test
             self.iter += 1
-
-            print ('Iter:%d, f=%f, a=%f, stuck=%d, happy=%d' % (self.iter, self.fval, self.a, stuck, self.fval < fvalN))
-
+            print ('Iter:%d, f=%f, a=%f' % (self.iter, self.fval, self.a))
             if self.iter > self.maxiter or stuck:
                 break
 
@@ -97,7 +96,6 @@ class SteepestDescent(object):
         print('Number of function evaluations: %d' % self.nevals)
         print('Minimum criterion value: %f' % self.fval)
         print('Optimization time: %f' % self.time)
-        print self.a
 
 
 class ConjugateDescent(SteepestDescent):
@@ -151,3 +149,50 @@ class NewtonDescent(SteepestDescent):
             trH = force_tiny(np.trace(H))
             dx = -(H.shape[0] / trH) * g
         return np.nan_to_num(dx)
+
+
+class ScipyCG(object):
+
+    def __init__(self, x, f, grad_f, maxiter=None, tol=1e-7):
+        stuff = fmin_cg(f, x, fprime=grad_f, args=(),
+                        maxiter=maxiter, gtol=tol,
+                        full_output=True)
+        self.x, self.fval = stuff[0], stuff[1]
+
+    def argmin(self):
+        return self.x
+
+    def message(self):
+        print('Scipy conjugate gradient implementation')
+    
+
+class ScipyNCG(object):
+
+    def __init__(self, x, f, grad_f, maxiter=None, tol=1e-7):
+        stuff = fmin_ncg(f, x, grad_f, args=(),
+                         maxiter=maxiter, avextol=tol,
+                         full_output=True)
+        self.x, self.fval = stuff[0], stuff[1]
+
+    def argmin(self):
+        return self.x
+
+    def message(self):
+        print('Scipy Newton conjugate gradient implementation')
+
+
+class ScipyBFGS(object):
+
+    def __init__(self, x, f, grad_f, maxiter=None, tol=1e-7):
+        stuff = fmin_bfgs(f, x, fprime=grad_f, args=(),
+                          maxiter=maxiter, gtol=tol,
+                          full_output=True)
+        self.x, self.fval = stuff[0], stuff[1]
+
+    def argmin(self):
+        return self.x
+
+    def message(self):
+        print('Scipy BFGS quasi-Newton implementation')
+    
+    

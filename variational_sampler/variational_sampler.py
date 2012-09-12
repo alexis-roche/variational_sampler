@@ -3,7 +3,8 @@ import numpy as np
 
 from .numlib import (SteepestDescent,
                      ConjugateDescent,
-                     NewtonDescent)
+                     NewtonDescent,
+                     ScipyCG, ScipyNCG, ScipyBFGS)
 from .sampling import Sample
 from .gaussian import Gaussian
 
@@ -195,6 +196,15 @@ class VariationalFit(object):
         elif minimizer == 'newton':
             m = NewtonDescent(theta, self._loss, self._gradient,
                               self._hessian, maxiter=maxiter, tol=tol)
+        elif minimizer == 'cg':
+            m = ScipyCG(theta, self._loss, self._gradient,
+                        maxiter=maxiter, tol=tol)
+        elif minimizer == 'ncg':
+            m = ScipyNCG(theta, self._loss, self._gradient,
+                         maxiter=maxiter, tol=tol)
+        elif minimizer == 'bfgs':
+            m = ScipyBFGS(theta, self._loss, self._gradient,
+                          maxiter=maxiter, tol=tol)
         else:
             raise ValueError('unknown minimizer')
         m.message()
