@@ -2,13 +2,11 @@
 Constants used in several modules.
 Basic implementation of Gauss-Newton gradient descent scheme.
 """
-
+from time import time
+from warnings import warn
 import numpy as np
 from scipy.linalg import cho_factor, cho_solve, eigh
-from scipy.optimize import fmin_cg, fmin_ncg, fmin_bfgs
 
-XTOL = 1e-7
-GTOL = 1e-5
 dinfo = np.finfo(np.double)
 TINY = dinfo.tiny
 HUGE = dinfo.max
@@ -29,92 +27,127 @@ def safe_eigh(A):
     return abs_s, sign_s, P
 
 
-def newton(f, x0, fprime=None, hess=None, args=(),
-           maxiter=None, xtol=XTOL, callback=None):
+class SteepestDescent(object):
 
-    """
-    Custom Newton method with adaptive step size.
-    """
-    x = np.asarray(x0).flatten()
-    fval0 = f(x, *args)
-    fval = fval0
-    it = 0
-    if maxiter == None:
-        maxiter = np.inf
+    def __init__(self, x, f, grad_f, maxiter=None, tol=1e-7):
+        self._generic_init(x, f, grad_f, maxiter, tol)
+        self.run()
 
-    while it < maxiter:
+    def _generic_init(self, x, f, grad_f, maxiter, tol):
+        self.x = np.asarray(x).ravel()
+        self.f = f
+        self.grad_f = grad_f
+        if maxiter == None:
+            maxiter = np.inf
+        self.maxiter = maxiter
+        self.tol = tol
+        self.fval = self.f(self.x)
+        self.fval0 = self.fval
+        self.iter = 0
+        self.a = 1
+        self.nevals = 1
+        
+    def direction(self):
+        return np.nan_to_num(-self.grad_f(self.x))
 
-        # Update iteration number
-        it += 1
+    def run(self):
+        t0 = time()
+        while self.iter < self.maxiter:
+            # Evaluate function at current point
+            xN = self.x
+            fvalN = self.fval
 
-        # Compute gradient and hessian at current point
-        xN = x
-        fvalN = fval
-        g = fprime(xN, *args)
-        H = hess(xN, *args)
+            # Compute descent direction
+            dx = self.direction()
+            dx_inf = np.max(np.abs(dx))
 
-        # Solve H*dx = -g
-        try:  # Use Cholesky decomposition: H = L L.T
-            L, _ = cho_factor(H, lower=0)
-            dx = - cho_solve((L, 0), g)
-        except:  # Assume diagonal H = tr(H)/n Id
-            print('Ooops... singular Hessian, regularizing')
-            trH = np.nan_to_num(force_tiny(np.trace(H)))
-            dx = -(H.shape[0] / trH) * g
-        dx = np.nan_to_num(dx)
+            # Line search
+            done = False
+            stuck = False
+            a = self.a
+            while not done:
+                x = xN + a * dx
+                fval = self.f(x)
+                self.nevals += 1
+                if fval < self.fval:
+                    self.fval = fval
+                    self.x = x
+                    self.a = a
+                    a *= 2
+                else:
+                    a *= .5
+                    stuck = abs(a * dx_inf) < self.tol
+                    done = self.fval < fvalN or stuck
 
-        # Adaptive Newton proposal
-        unbeaten = True
-        sub_it = 0
-        while unbeaten:
-            sub_it += 1
-            # stop if step size is too small
-            step_size = np.max(np.abs(dx))
-            if step_size < xtol:
+            # Termination test
+            self.iter += 1
+
+            print ('Iter:%d, f=%f, a=%f, stuck=%d, happy=%d' % (self.iter, self.fval, self.a, stuck, self.fval < fvalN))
+
+            if self.iter > self.maxiter or stuck:
                 break
-            # new proposal
-            x = xN + dx
-            fval = f(x, *args)
-            unbeaten = (fval > fvalN)
-            # reduce step size for next try
-            dx *= .5
-        if unbeaten:
-            x = xN
-            break
-        x = np.nan_to_num(x)
-        step_size = np.max(np.abs(dx))
-        if step_size < xtol:
-            break
 
-    print('Number of iterations: %d' % it)
-    print('Gradient norm: %f' % np.max(np.abs(g)))
-    print('Minimum criterion value: %f' % fval)
+        self.time = time() - t0
 
-    return x
+    def argmin(self):
+        return self.x
+
+    def message(self):
+        print('Number of iterations: %d' % self.iter)
+        print('Number of function evaluations: %d' % self.nevals)
+        print('Minimum criterion value: %f' % self.fval)
+        print('Optimization time: %f' % self.time)
+        print self.a
 
 
-def minimize(f, x, grad,
-             hess=None,
-             args=(),
-             minimizer='newton',
-             maxiter=None,
-             xtol=XTOL,
-             gtol=GTOL):
-    """
-    Util function to call any minimizer with the desired arguments
-    """
-    if minimizer == 'newton':
-        xm = newton(f, x, grad, hess=hess, args=args,
-                      maxiter=maxiter, xtol=xtol)
-    elif minimizer == 'ncg':
-        xm = fmin_ncg(f, x, grad, fhess=hess, args=args,
-                        maxiter=maxiter, avextol=xtol)
-    elif minimizer == 'cg':
-        xm = fmin_cg(f, x, fprime=grad, args=args,
-                       maxiter=maxiter, gtol=gtol)
-    elif minimizer == 'bfgs':
-        xm = fmin_bfgs(f, x, fprime=grad, args=args,
-                         maxiter=maxiter, gtol=gtol)
-    else:
-        raise ValueError('unknown minimizer')
-    return np.nan_to_num(xm)
+class ConjugateDescent(SteepestDescent):
+
+    def __init__(self, x, f, grad_f, maxiter=None, tol=1e-7):
+        self._generic_init(x, f, grad_f, maxiter, tol)
+        self.prev_dx = None
+        self.prev_g = None
+        self.run()
+
+    def direction(self):
+        """
+        Polak-Ribiere rule. Reset direction if beta < 0 or if
+        objective increases along proposed direction.
+        """
+        g = self.grad_f(self.x)
+        if self.prev_dx == None:
+            dx = -g
+        else:
+            b = max(0, np.dot(g, g - self.prev_g) / np.sum(self.prev_g ** 2))
+            dx = -g + b * self.prev_dx
+            if np.dot(dx, g) > 0:
+                dx = -g
+        self.prev_g = g
+        self.prev_dx = dx
+        return np.nan_to_num(dx)
+
+
+class NewtonDescent(SteepestDescent):
+
+    def __init__(self, x, f, grad_f, hess_f, maxiter=None, tol=1e-7):
+        self._generic_init(x, f, grad_f, maxiter, tol)
+        self.hess_f = hess_f
+        self.run()
+        
+    def direction(self):
+        """
+        Compute the gradient g and Hessian H, then solve H dx = -g
+        using the Cholesky decomposition: H = L L.T
+        
+        Upon failure, approximate the Hessian by a scalar matrix,
+        i.e. H = tr(H) / n Id
+        """
+        g = self.grad_f(self.x)
+        H = self.hess_f(self.x)
+        try:  
+            L, _ = cho_factor(H, lower=0)
+            dx = -cho_solve((L, 0), g)
+        except:
+            warn('Ooops... singular Hessian, regularizing')
+            trH = force_tiny(np.trace(H))
+            dx = -(H.shape[0] / trH) * g
+        return np.nan_to_num(dx)

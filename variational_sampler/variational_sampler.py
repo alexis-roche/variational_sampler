@@ -1,9 +1,12 @@
 from time import time
 import numpy as np
 
-from .numlib import minimize, force_tiny
+from .numlib import (SteepestDescent,
+                     ConjugateDescent,
+                     NewtonDescent)
 from .sampling import Sample
 from .gaussian import Gaussian
+
 
 
 def make_design(x):
@@ -84,13 +87,13 @@ class DirectFit(object):
 
 class VariationalFit(object):
     
-    def __init__(self, S, maxiter=None, minimizer='newton'):
+    def __init__(self, S, tol=1e-7, maxiter=None, minimizer='newton'):
         """
         Variational sampler object.
         """
-        self._init_from_sample(S, maxiter, minimizer)
+        self._init_from_sample(S, tol, maxiter, minimizer)
 
-    def _init_from_sample(self, S, maxiter, minimizer):
+    def _init_from_sample(self, S, tol, maxiter, minimizer):
         """
         Init object given a sample instance.
         """
@@ -110,7 +113,7 @@ class VariationalFit(object):
             'log_q': np.zeros(S.p.size)}
 
         # Perform fitting
-        self._do_fitting(maxiter, minimizer)
+        self._do_fitting(tol, maxiter, minimizer)
         self.time = time() - t0
 
     def _udpate_fit(self, theta):
@@ -162,33 +165,41 @@ class VariationalFit(object):
     def _sigma2(self, theta):
         return self._hessian(self.theta) / self.npts
 
-    def _do_fitting(self, maxiter, minimizer):
+    def _do_fitting(self, tol, maxiter, minimizer):
         """
         Perform Gaussian approximation.
 
         Parameters
         ----------
+        tol : float
+          Tolerance on optimized parameter
+
         maxiter : int
-          Maximum number of iterations in the optimization
+          Maximum number of iterations in optimization
 
         minimizer : string
-          One of 'newton', 'ncg', 'cg', 'bfgs'
+          One of 'steepest', 'conjugate', 'newton'
 
         Returns
         -------
         fit : Gaussian object
           Gaussian fit
         """
-        # Run optimizer
-        def callback(theta):
-            print(theta)
         theta = np.zeros(self._cache['F'].shape[0])
-        self._theta = minimize(self._loss,
-                               theta,
-                               self._gradient,
-                               hess=self._hessian,
-                               minimizer=minimizer,
-                               maxiter=maxiter)
+        if minimizer == 'steepest':
+            m = SteepestDescent(theta, self._loss, self._gradient,
+                                maxiter=maxiter, tol=tol)
+        elif minimizer == 'conjugate':
+            m = ConjugateDescent(theta, self._loss, self._gradient,
+                                 maxiter=maxiter, tol=tol)
+        elif minimizer == 'newton':
+            m = NewtonDescent(theta, self._loss, self._gradient,
+                              self._hessian, maxiter=maxiter, tol=tol)
+        else:
+            raise ValueError('unknown minimizer')
+        m.message()
+        self._theta = m.argmin()
+        self.minimizer = m
 
     def _get_theta(self):
         return self._theta
@@ -231,8 +242,8 @@ class DirectSampler(DirectFit):
 
 class VariationalSampler(VariationalFit):
     def __init__(self, target, ms, Vs, ndraws=None, reflect=False,
-                 maxiter=None, minimizer='newton'):
+                 tol=1e-7, maxiter=None, minimizer='newton'):
         S = Sample(target, ms, Vs,
                    ndraws=ndraws,
                    reflect=reflect)
-        self._init_from_sample(S, maxiter, minimizer)
+        self._init_from_sample(S, tol, maxiter, minimizer)

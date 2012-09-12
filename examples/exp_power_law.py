@@ -18,14 +18,14 @@ def gauss_hermite(target, h2, npts):
     return Gaussian(m, V, Z=Z)
 
 
-BETA = 1.5
-NPTS = 20
+BETA = 1
+NPTS = 100
 
 target = ExponentialPowerLaw(beta=BETA)
 h2 = 10 * target.V.squeeze()
 
 s = Sample(target, 0, h2, ndraws=NPTS)
-vs = VariationalFit(s)
+vs = VariationalFit(s, maxiter=10)
 ds = DirectFit(s)
 
 gs_loc_fit = gauss_hermite(target, h2, 250)
