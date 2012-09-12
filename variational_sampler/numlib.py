@@ -154,10 +154,12 @@ class NewtonDescent(SteepestDescent):
 class ScipyCG(object):
 
     def __init__(self, x, f, grad_f, maxiter=None, tol=1e-7):
+        t0 = time()
         stuff = fmin_cg(f, x, fprime=grad_f, args=(),
                         maxiter=maxiter, gtol=tol,
                         full_output=True)
         self.x, self.fval = stuff[0], stuff[1]
+        self.time = time() - t0
 
     def argmin(self):
         return self.x
@@ -168,11 +170,13 @@ class ScipyCG(object):
 
 class ScipyNCG(object):
 
-    def __init__(self, x, f, grad_f, maxiter=None, tol=1e-7):
-        stuff = fmin_ncg(f, x, grad_f, args=(),
+    def __init__(self, x, f, grad_f, hess_f, maxiter=None, tol=1e-7):
+        t0 = time()
+        stuff = fmin_ncg(f, x, grad_f, fhess=hess_f, args=(),
                          maxiter=maxiter, avextol=tol,
                          full_output=True)
         self.x, self.fval = stuff[0], stuff[1]
+        self.time = time() - t0
 
     def argmin(self):
         return self.x
@@ -184,10 +188,12 @@ class ScipyNCG(object):
 class ScipyBFGS(object):
 
     def __init__(self, x, f, grad_f, maxiter=None, tol=1e-7):
+        t0 = time()
         stuff = fmin_bfgs(f, x, fprime=grad_f, args=(),
                           maxiter=maxiter, gtol=tol,
                           full_output=True)
         self.x, self.fval = stuff[0], stuff[1]
+        self.time = time() - t0
 
     def argmin(self):
         return self.x

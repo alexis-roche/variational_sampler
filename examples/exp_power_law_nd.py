@@ -8,7 +8,7 @@ from variational_sampler.toy_examples import ExponentialPowerLaw
 
 
 BETA = 2
-DIM = 50
+DIM = 20
 NPTS = DIM ** 2
 
 target = ExponentialPowerLaw(beta=BETA, dim=DIM)

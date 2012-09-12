@@ -8,6 +8,13 @@ from .numlib import (SteepestDescent,
 from .sampling import Sample
 from .gaussian import Gaussian
 
+MIN_IMPL = {'steepest': SteepestDescent,
+            'conjugate': ConjugateDescent,
+            'newton': NewtonDescent,
+            'cg': ScipyCG,
+            'ncg': ScipyNCG,
+            'bfgs': ScipyBFGS
+            }
 
 
 def make_design(x):
@@ -187,26 +194,14 @@ class VariationalFit(object):
           Gaussian fit
         """
         theta = np.zeros(self._cache['F'].shape[0])
-        if minimizer == 'steepest':
-            m = SteepestDescent(theta, self._loss, self._gradient,
-                                maxiter=maxiter, tol=tol)
-        elif minimizer == 'conjugate':
-            m = ConjugateDescent(theta, self._loss, self._gradient,
-                                 maxiter=maxiter, tol=tol)
-        elif minimizer == 'newton':
-            m = NewtonDescent(theta, self._loss, self._gradient,
-                              self._hessian, maxiter=maxiter, tol=tol)
-        elif minimizer == 'cg':
-            m = ScipyCG(theta, self._loss, self._gradient,
-                        maxiter=maxiter, tol=tol)
-        elif minimizer == 'ncg':
-            m = ScipyNCG(theta, self._loss, self._gradient,
-                         maxiter=maxiter, tol=tol)
-        elif minimizer == 'bfgs':
-            m = ScipyBFGS(theta, self._loss, self._gradient,
-                          maxiter=maxiter, tol=tol)
-        else:
+        if minimizer not in MIN_IMPL.keys():
             raise ValueError('unknown minimizer')
+        if minimizer in ('newton', 'ncg'):
+            m = MIN_IMPL[minimizer](theta, self._loss, self._gradient,
+                                    self._hessian, maxiter=maxiter, tol=tol)
+        else:
+            m = MIN_IMPL[minimizer](theta, self._loss, self._gradient,
+                                    maxiter=maxiter, tol=tol)
         m.message()
         self._theta = m.argmin()
         self.minimizer = m
