@@ -208,19 +208,19 @@ class FactorGaussian(Gaussian):
         self._dim = dim
         self._theta_dim = 2 * dim + 1
 
-    def _set_moments(self, m, V, K=None, Z=None):
+    def _set_moments(self, m, v, K=None, Z=None):
         m = np.asarray(m)
         dim = m.size
         self._set_dimensions(dim)
 
         # Mean and variance
         m = np.nan_to_num(np.reshape(m, (dim,)))
-        V = np.nan_to_num(np.reshape(V, (dim,)))
+        v = np.nan_to_num(np.reshape(v, (dim,)))
         self._dim = dim
         self._m = m
-        self._V = V
-        self._invV = np.nan_to_num(1 / self._V)
-        self._detV = np.prod(V)
+        self._v = v
+        self._invv = np.nan_to_num(1 / self._v)
+        self._detV = np.prod(v)
 
         # Normalization constant
         if not K == None:
@@ -231,16 +231,19 @@ class FactorGaussian(Gaussian):
             self._K = Z_to_K(Z, self._dim, self._detV)
         
     def _get_V(self):
-        return np.diag(self._V)
+        return np.diag(self._v)
+
+    def _get_v(self):
+        return self._v
 
     def _get_invV(self):
-        return np.diag(self._invV)
+        return np.diag(self._invv)
 
     def _get_sqrtV(self):
-        return np.diag(np.sqrt(np.abs(self._V)))
+        return np.diag(np.sqrt(np.abs(self._v)))
 
     def _get_theta(self):
-        invV = np.nan_to_num(1 / self._V)
+        invV = np.nan_to_num(1 / self._v)
         theta2 = -.5 * invV
         theta1 = invV * self._m
         theta0 = np.log(self._K) - .5 * np.dot(self._m, theta1)
@@ -250,33 +253,34 @@ class FactorGaussian(Gaussian):
         theta = np.asarray(theta)
         dim = (theta.size - 1) / 2
         self._set_dimensions(dim)
-        invV = -2 * theta[0:self._dim]
-        self._invV = invV
-        self._V = np.nan_to_num(1 / invV)
-        self._m = self._V * theta[self._dim:-1]
-        self._K = np.exp(theta[-1] + .5 * np.dot(self._m, invV * self._m))
-        self._detV = np.prod(self._V)
+        invv = -2 * theta[0:self._dim]
+        self._invv = invv
+        self._v = np.nan_to_num(1 / invv)
+        self._m = self._v * theta[self._dim:-1]
+        self._K = np.exp(theta[-1] + .5 * np.dot(self._m, invv * self._m))
+        self._detV = np.prod(self._v)
 
     def __call__(self, xs):
         ys = (xs.T - self._m).T
-        u2 = np.sum(self._invV * (ys ** 2).T, 0)
+        u2 = np.sum(self._invv * (ys ** 2).T, 1)
         return self._K * np.exp(-.5 * u2)
 
     def copy(self):
-        return Gaussian(self._m, self._V, self._K)
+        return Gaussian(self._m, self._v, self._K)
 
     def sample(self, ndraws=1):
-        xs = (np.sqrt(np.abs(self._V)) * np.random.normal(size=(self._dim, ndraws)).T).T
+        xs = (np.sqrt(np.abs(self._v)) * np.random.normal(size=(self._dim, ndraws)).T).T
         return (self._m + xs.T).T  # preserves shape
 
     def __str__(self):
         s = 'Factored Gaussian distribution with parameters:\n'
         s += str(self._get_Z()) + '\n'
         s += str(self._m) + '\n'
-        s += 'diag(' + str(self._V) + ')\n'
+        s += 'diag(' + str(self._v) + ')\n'
         return s
 
     V = property(_get_V)
+    v = property(_get_v)
     invV = property(_get_invV)
     sqrtV = property(_get_sqrtV)
     theta = property(_get_theta, _set_theta)
@@ -323,8 +327,8 @@ class FactorGaussianFamily(object):
     def from_moment(self, moment):
         Z = moment[-1]
         m = moment[-1 - self._dim:-1] / Z
-        V = moment[0:-1 - self._dim] / Z - m ** 2
-        return FactorGaussian(m, V, Z=Z)
+        v = moment[0:-1 - self._dim] / Z - m ** 2
+        return FactorGaussian(m, v, Z=Z)
         
     def from_theta(self, theta):
         return FactorGaussian(theta=theta)

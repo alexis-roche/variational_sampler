@@ -1,11 +1,13 @@
 import numpy as np
 import pylab as plt
-from variational_sampler import (VariationalFit,
-                                 ImportanceFit,
-                                 Gaussian,
-                                 Sample)
-from variational_sampler.toy_examples import ExponentialPowerLaw
 from scipy.special.orthogonal import h_roots
+
+from variational_sampler.variational_sampler import (VariationalFit,
+                                                     ImportanceFit)
+from variational_sampler.gaussian import Gaussian
+from variational_sampler.sampling import Sample
+from variational_sampler.toy_examples import ExponentialPowerLaw
+
 
 
 def gauss_hermite(target, h2, npts):
@@ -33,7 +35,7 @@ gh_loc_fit = gauss_hermite(target, h2, NPTS)
 
 print ('Error for VS: %f (expected: %f)'\
            % (gs_loc_fit.kl_div(vs.loc_fit), vs.kl_error))
-print ('Error for DS: %f (expected: %f)'\
+print ('Error for IS: %f (expected: %f)'\
            % (gs_loc_fit.kl_div(ds.loc_fit), ds.kl_error))
 print ('Error for GH: %f' % gs_loc_fit.kl_div(gh_loc_fit))
 
@@ -44,6 +46,6 @@ x = np.linspace(-xmax, xmax, 2 * xmax / 0.01)
 x = np.reshape(x, (1, x.size))
 plt.plot(x.squeeze(), vs.fit(x), 'blue', linewidth=2)
 plt.plot(x.squeeze(), ds.fit(x), 'orange', linewidth=2)
-plt.legend(('VS', 'DS'))
+plt.legend(('VS', 'IS'))
 plt.stem(xs.squeeze(), target(xs.squeeze()), linefmt='k-', markerfmt='ko')
 plt.plot(x.squeeze(), target(x.squeeze()), 'k')

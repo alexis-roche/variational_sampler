@@ -4,6 +4,7 @@ from numpy.testing import assert_array_almost_equal
 
 from ..variational_sampler import (VariationalSampler,
                                    ImportanceSampler)
+from ..gaussian import (Gaussian, FactorGaussian)
 
 
 def target1d(x):
@@ -47,4 +48,52 @@ def test_loss():
     assert_equal(vs._loss(None), np.inf)
     print vs._loss(np.array((0, 0, -2500)))
     print vs._loss(np.array((0, 0, -1e10)))
+
+
+def _test_vs_exactness(dim):
+    m = np.zeros(dim)
+    A = np.random.random((dim, dim))
+    V = np.dot(A, A.T)
+    g = Gaussian(m, V)
+    ndraws = ((dim + 1) * (dim + 2)) / 2
+    vs = VariationalSampler(g, m, V, ndraws=ndraws)
+    assert_almost_equal(vs.fit.Z, 1)
+    assert_array_almost_equal(vs.fit.m, m)
+    assert_array_almost_equal(vs.fit.V, V)
+
+
+def test_vs_exactness_2d():
+    _test_vs_exactness(2)
+
+
+def test_vs_exactness_3d():
+    _test_vs_exactness(3)
+
+
+def test_vs_exactness_5d():
+    _test_vs_exactness(5)
+
+
+def _test_vs_exactness_fg(dim):
+    m = np.zeros(dim)
+    v = np.random.random(dim) ** 2
+    g = FactorGaussian(m, v)
+    ndraws = 2 * dim + 1
+    vs = VariationalSampler(g, m, v, ndraws=ndraws,
+                            family='factor_gaussian')
+    assert_almost_equal(vs.fit.Z, 1)
+    assert_array_almost_equal(vs.fit.m, m)
+    assert_array_almost_equal(vs.fit.v, v)
+
+
+def test_vs_exactness_fg_2d():
+    _test_vs_exactness_fg(2)
+
+
+def test_vs_exactness_fg_3d():
+    _test_vs_exactness_fg(3)
+
+
+def test_vs_exactness_fg_5d():
+    _test_vs_exactness_fg(5)
 

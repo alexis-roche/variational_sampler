@@ -1,9 +1,5 @@
 from .variational_sampler import (VariationalSampler,
-                                  VariationalFit,
-                                  ImportanceSampler,
-                                  ImportanceFit)
-from .gaussian import Gaussian
-from .sampling import Sample
+                                  ImportanceSampler)
 
 from numpy.testing import Tester
 test = Tester().test
