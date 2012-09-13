@@ -41,7 +41,7 @@ class Sample(object):
             raise ValueError('input variance not understood')
         self.reflect = reflect
         if ndraws == None:
-            ndraws = self.kernel.param_dim
+            ndraws = self.kernel.theta_dim
             warnings.warn('Setting ndraws to the minimum number: %d' % ndraws)
 
         # Sample random points
