@@ -4,6 +4,7 @@ import numpy as np
 from .numlib import (SteepestDescent,
                      ConjugateDescent,
                      NewtonDescent,
+                     QuasiNewtonDescent,
                      ScipyCG, ScipyNCG, ScipyBFGS)
 from .sampling import Sample
 from .gaussian import Gaussian
@@ -11,6 +12,7 @@ from .gaussian import Gaussian
 MIN_IMPL = {'steepest': SteepestDescent,
             'conjugate': ConjugateDescent,
             'newton': NewtonDescent,
+            'quasi_newton': QuasiNewtonDescent,
             'cg': ScipyCG,
             'ncg': ScipyNCG,
             'bfgs': ScipyBFGS
@@ -165,6 +167,14 @@ class VariationalFit(object):
         c = self._cache
         return np.dot(c['F'] * c['q'], c['F'].T)
 
+    def _pseudo_hessian(self):
+        """
+        Approximate the Hessian at the minimum by substituting the
+        fitted distribution with the target distribution.
+        """
+        c = self._cache
+        return np.dot(c['F'] * c['p'], c['F'].T)
+
     def _sigma1(self, theta):
         c = self._cache
         return np.dot(c['F'] * ((c['p'] - c['q']) ** 2), c['F'].T)\
@@ -199,6 +209,9 @@ class VariationalFit(object):
         if minimizer in ('newton', 'ncg'):
             m = MIN_IMPL[minimizer](theta, self._loss, self._gradient,
                                     self._hessian, maxiter=maxiter, tol=tol)
+        elif minimizer in ('quasi_newton',):
+            m = MIN_IMPL[minimizer](theta, self._loss, self._gradient,
+                                    self._pseudo_hessian(), maxiter=maxiter, tol=tol)
         else:
             m = MIN_IMPL[minimizer](theta, self._loss, self._gradient,
                                     maxiter=maxiter, tol=tol)

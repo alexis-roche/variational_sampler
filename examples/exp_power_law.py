@@ -18,7 +18,7 @@ def gauss_hermite(target, h2, npts):
     return Gaussian(m, V, Z=Z)
 
 
-BETA = 1
+BETA = 2
 NPTS = 100
 
 target = ExponentialPowerLaw(beta=BETA)
