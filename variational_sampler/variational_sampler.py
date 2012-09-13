@@ -7,7 +7,8 @@ from .numlib import (SteepestDescent,
                      QuasiNewtonDescent,
                      ScipyCG, ScipyNCG, ScipyBFGS)
 from .sampling import Sample
-from .gaussian import Gaussian
+from .gaussian import (GaussianFamily,
+                       FactorGaussianFamily)
 
 MIN_IMPL = {'steepest': SteepestDescent,
             'conjugate': ConjugateDescent,
@@ -19,31 +20,30 @@ MIN_IMPL = {'steepest': SteepestDescent,
             }
 
 
-def make_design(x):
-    """
-    Assemble design matrix with general term: F_ik = phi_i(x_k)
-    """
-    I, J = np.triu_indices(x.shape[0])
-    F = np.array([x[i, :] * x[j, :] for i, j in zip(I, J)])
-    return np.concatenate((F, x, np.ones([1, x.shape[1]])))
+FAM_IMPL = {'gaussian': GaussianFamily,
+            'factor_gaussian': FactorGaussianFamily
+            }
 
 
-class DirectFit(object):
+class ImportanceFit(object):
 
-    def __init__(self, S):
+    def __init__(self, S, family='gaussian'):
         """
         Naive variational sampler object.
         """
-        self._init_from_sample(S)
+        self._init_from_sample(S, family)
 
-    def _init_from_sample(self, S):
+    def _init_from_sample(self, S, family):
         t0 = time()
         self.sample = S
         self.dim = S.x.shape[0]
         self.npts = S.x.shape[1]
         
-        # Make a cache: pre-compute the design matrix
-        self._cache = {'F': make_design(S.x)}
+        # Instantiate fitting family
+        if family not in FAM_IMPL.keys():
+            raise ValueError('unknown family')
+        self.family = FAM_IMPL[family](self.dim)
+        self._cache = {'F': self.family.design_matrix(S.x)}
 
         # Perform fit
         self._do_fitting()
@@ -53,14 +53,8 @@ class DirectFit(object):
         F = self._cache['F']
         p = self.sample.p
         moment = np.dot(F, p) / self.npts
-        Z = moment[-1]
-        m = moment[-1 - self.dim:-1] / Z
-        V = np.zeros((self.dim, self.dim))
-        idx = np.triu_indices(self.dim) 
-        V[idx] = moment[0:-1 - self.dim] / Z
-        V[np.tril_indices(self.dim)] = V[idx]
-        V -= np.diag(m ** 2)
-        self._loc_fit = Gaussian(m, V, Z=Z)
+        self._loc_fit = self.family.from_moment(moment)
+        # Compute variance on moment estimate
         if moment.ndim == 1:
             moment = np.reshape(moment, (moment.size, 1))
         self._sigma1 = np.dot(F * (p ** 2), F.T) / self.npts\
@@ -70,7 +64,7 @@ class DirectFit(object):
         return self._loc_fit.theta - self.sample.kernel.theta
 
     def _get_fit(self):
-        return Gaussian(theta=self.theta)
+        return self.family.from_theta(theta=self.theta)
 
     def _get_loc_fit(self):
         return self._loc_fit
@@ -97,13 +91,14 @@ class DirectFit(object):
 
 class VariationalFit(object):
     
-    def __init__(self, S, tol=1e-7, maxiter=None, minimizer='newton'):
+    def __init__(self, S, family='gaussian',
+                 tol=1e-5, maxiter=None, minimizer='newton'):
         """
         Variational sampler object.
         """
-        self._init_from_sample(S, tol, maxiter, minimizer)
+        self._init_from_sample(S, family, tol, maxiter, minimizer)
 
-    def _init_from_sample(self, S, tol, maxiter, minimizer):
+    def _init_from_sample(self, S, family, tol, maxiter, minimizer):
         """
         Init object given a sample instance.
         """
@@ -112,11 +107,13 @@ class VariationalFit(object):
         self.dim = S.x.shape[0]
         self.npts = S.x.shape[1]
 
-        # Make a cache: pre-allocate various arrays and pre-compute
-        # the design matrix
+        # Instantiate fitting family
+        if family not in FAM_IMPL.keys():
+            raise ValueError('unknown family')
+        self.family = FAM_IMPL[family](self.dim)
         self._cache = {
             'theta': None,
-            'F': make_design(S.x),
+            'F': self.family.design_matrix(S.x),
             'p': S.p,
             'log_p': np.nan_to_num(np.log(S.p)),
             'q': np.zeros(S.p.size),
@@ -223,11 +220,11 @@ class VariationalFit(object):
         return self._theta
 
     def _get_fit(self):
-        return Gaussian(theta=self.theta)
+        return self.family.from_theta(theta=self.theta)
 
     def _get_loc_fit(self):
-        return Gaussian(theta=self.theta
-                        + self.sample.kernel.theta)
+        return self.family.from_theta(theta=self.theta
+                                      + self.sample.kernel.theta)
 
     def _get_sigma1(self):
         return self._sigma1(self.theta)
@@ -250,18 +247,19 @@ class VariationalFit(object):
     kl_error = property(_get_kl_error)
 
 
-class DirectSampler(DirectFit):    
-    def __init__(self, target, ms, Vs, ndraws=None, reflect=False):
+class ImportanceSampler(ImportanceFit):    
+    def __init__(self, target, ms, Vs, ndraws=None, reflect=False,
+                 family='gaussian'):
         S = Sample(target, ms, Vs,
                    ndraws=ndraws,
                    reflect=reflect)
-        self._init_from_sample(S)
+        self._init_from_sample(S, family)
 
 
 class VariationalSampler(VariationalFit):
     def __init__(self, target, ms, Vs, ndraws=None, reflect=False,
-                 tol=1e-7, maxiter=None, minimizer='newton'):
+                 family='gaussian', tol=1e-5, maxiter=None, minimizer='newton'):
         S = Sample(target, ms, Vs,
                    ndraws=ndraws,
                    reflect=reflect)
-        self._init_from_sample(S, tol, maxiter, minimizer)
+        self._init_from_sample(S, family, tol, maxiter, minimizer)

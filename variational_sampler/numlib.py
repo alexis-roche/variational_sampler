@@ -165,36 +165,6 @@ class QuasiNewtonDescent(SteepestDescent):
         return np.nan_to_num(dx)
 
 
-class BFGSQuasiNewtonDescent(SteepestDescent):
-
-    def __init__(self, x, f, grad_f, maxiter=None, tol=1e-7):
-        self._generic_init(x, f, grad_f, maxiter, tol)
-        self.Hinv = np.eye(x.size)
-        self.prev_g = None
-        self.prev_dx = None
-        self.run()
-    
-    def direction(self):
-        """
-        BFGS inverse Hessian approximation.
-        """
-        g = self.grad_f(self.x)
-        if self.prev_dx == None:
-            dx = -g
-        else:
-            s = self.a * self.prev_dx
-            y = g - self.prev_g
-            sy = np.dot(s, y)
-            if abs(sy) > 1e-5:
-                By = np.dot(self.Hinv, y)
-                self.Hinv = self.Hinv + ((sy + np.dot(y, By)) / (sy ** 2)) * np.outer(s, s)\
-                    - (1 / sy) * (np.outer(By, s) + np.outer(s, By))
-            dx = -np.dot(self.Hinv, g)
-        self.prev_g = g
-        self.prev_dx = dx
-        return np.nan_to_num(dx)
-
-
 class ScipyCG(object):
 
     def __init__(self, x, f, grad_f, maxiter=None, tol=1e-7):

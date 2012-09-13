@@ -3,7 +3,7 @@ from nose.tools import assert_equal, assert_almost_equal
 from numpy.testing import assert_array_almost_equal
 
 from ..variational_sampler import (VariationalSampler,
-                                   DirectSampler)
+                                   ImportanceSampler)
 
 
 def target1d(x):
@@ -32,11 +32,11 @@ def test2d_vs_basic():
 
 
 def test1d_ds_basic():
-    _test_basic(DirectSampler(target1d, 0, 1, ndraws=10))
+    _test_basic(ImportanceSampler(target1d, 0, 1, ndraws=10))
 
 
 def test2d_ds_basic():
-    _test_basic(DirectSampler(target, np.zeros(2), np.eye(2), ndraws=50))
+    _test_basic(ImportanceSampler(target, np.zeros(2), np.eye(2), ndraws=50))
 
 
 def test_loss():

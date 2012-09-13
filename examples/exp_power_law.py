@@ -1,7 +1,7 @@
 import numpy as np
 import pylab as plt
 from variational_sampler import (VariationalFit,
-                                 DirectFit,
+                                 ImportanceFit,
                                  Gaussian,
                                  Sample)
 from variational_sampler.toy_examples import ExponentialPowerLaw
@@ -26,7 +26,7 @@ h2 = 10 * target.V.squeeze()
 
 s = Sample(target, 0, h2, ndraws=NPTS)
 vs = VariationalFit(s, maxiter=10)
-ds = DirectFit(s)
+ds = ImportanceFit(s)
 
 gs_loc_fit = gauss_hermite(target, h2, 250)
 gh_loc_fit = gauss_hermite(target, h2, NPTS)

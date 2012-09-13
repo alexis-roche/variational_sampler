@@ -1,7 +1,7 @@
 from .variational_sampler import (VariationalSampler,
                                   VariationalFit,
-                                  DirectSampler,
-                                  DirectFit)
+                                  ImportanceSampler,
+                                  ImportanceFit)
 from .gaussian import Gaussian
 from .sampling import Sample
 
