@@ -6,7 +6,7 @@ import numpy as np
 import warnings
 
 from .numlib import force_tiny
-from .gaussian import Gaussian
+from .gaussian import Gaussian, FactorGaussian
 
 
 def reflect_sample(xs):
@@ -30,11 +30,15 @@ class Sample(object):
           variance of the sampling kernel
 
         """
-        self._initialize(target, ms, Vs, ndraws, reflect)
-
-    def _initialize(self, target, ms, Vs, ndraws, reflect):
         self.target = target
-        self.kernel = Gaussian(ms, Vs)
+        ms = np.asarray(ms)
+        Vs = np.asarray(Vs)
+        if Vs.ndim < 2:
+            self.kernel = FactorGaussian(ms, Vs)
+        elif Vs.ndim == 2:
+            self.kernel = Gaussian(ms, Vs)
+        else:
+            raise ValueError('input variance not understood')
         self.reflect = reflect
         if ndraws == None:
             ndraws = self.kernel.param_dim

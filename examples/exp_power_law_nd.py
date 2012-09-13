@@ -12,7 +12,7 @@ DIM = 50
 NPTS = DIM ** 2
 
 target = ExponentialPowerLaw(beta=BETA, dim=DIM)
-h2 = target.V
+h2 = np.diagonal(target.V)
 
 s = Sample(target, np.zeros(DIM), h2, ndraws=NPTS)
 vs = VariationalFit(s, minimizer='quasi_newton')

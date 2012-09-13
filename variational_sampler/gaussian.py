@@ -163,7 +163,7 @@ class Gaussian(object):
         """
         Return a d x N array.
         """
-        xs = np.dot(self._sqrtV, np.random.normal(size=[self._dim, ndraws]))
+        xs = np.dot(self._sqrtV, np.random.normal(size=(self._dim, ndraws)))
         return (self._m + xs.T).T  # preserves shape
 
     def kl_div(self, other):
@@ -266,7 +266,7 @@ class FactorGaussian(Gaussian):
         return Gaussian(self._m, self._V, self._K)
 
     def sample(self, ndraws=1):
-        xs = self._get_sqrtV() * np.random.normal(size=[self._dim, ndraws])
+        xs = (np.sqrt(np.abs(self._V)) * np.random.normal(size=(self._dim, ndraws)).T).T
         return (self._m + xs.T).T  # preserves shape
 
     def __str__(self):
