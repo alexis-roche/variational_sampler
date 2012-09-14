@@ -3,7 +3,7 @@ import pylab as plt
 from scipy.special.orthogonal import h_roots
 
 from variational_sampler.variational_sampler import (VariationalFit,
-                                                     ImportanceFit)
+                                                     VariationalFitIS)
 from variational_sampler.gaussian import Gaussian
 from variational_sampler.sampling import Sample
 from variational_sampler.toy_examples import ExponentialPowerLaw
@@ -28,7 +28,7 @@ h2 = 10 * target.V.squeeze()
 
 s = Sample(target, 0, h2, ndraws=NPTS)
 vs = VariationalFit(s, maxiter=10)
-ds = ImportanceFit(s)
+ds = VariationalFitIS(s)
 
 gs_loc_fit = gauss_hermite(target, h2, 250)
 gh_loc_fit = gauss_hermite(target, h2, NPTS)

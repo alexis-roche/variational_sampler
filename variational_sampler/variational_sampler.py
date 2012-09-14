@@ -25,70 +25,6 @@ FAM_IMPL = {'gaussian': GaussianFamily,
             }
 
 
-class ImportanceFit(object):
-
-    def __init__(self, S, family='gaussian'):
-        """
-        Naive variational sampler object.
-        """
-        self._init_from_sample(S, family)
-
-    def _init_from_sample(self, S, family):
-        t0 = time()
-        self.sample = S
-        self.dim = S.x.shape[0]
-        self.npts = S.x.shape[1]
-        
-        # Instantiate fitting family
-        if family not in FAM_IMPL.keys():
-            raise ValueError('unknown family')
-        self.family = FAM_IMPL[family](self.dim)
-        self._cache = {'F': self.family.design_matrix(S.x)}
-
-        # Perform fit
-        self._do_fitting()
-        self.time = time() - t0
-
-    def _do_fitting(self):
-        F = self._cache['F']
-        p = self.sample.p
-        moment = np.dot(F, p) / self.npts
-        self._loc_fit = self.family.from_moment(moment)
-        # Compute variance on moment estimate
-        if moment.ndim == 1:
-            moment = np.reshape(moment, (moment.size, 1))
-        self._sigma1 = np.dot(F * (p ** 2), F.T) / self.npts\
-            - np.dot(moment, moment.T)
-
-    def _get_theta(self):
-        return self._loc_fit.theta - self.sample.kernel.theta
-
-    def _get_fit(self):
-        return self.family.from_theta(theta=self.theta)
-
-    def _get_loc_fit(self):
-        return self._loc_fit
-
-    def _get_sigma1(self):
-        return self._sigma1
-
-    def _get_sigma2(self):
-        F = self._cache['F']
-        q = np.nan_to_num(np.exp(np.dot(F.T, np.nan_to_num(self.theta))))
-        return np.dot(F * q, F.T) / self.npts
-
-    def _get_kl_error(self):
-        return np.trace(self.sigma1 * np.linalg.inv(self.sigma2))\
-            / (2 * self.npts)
-
-    theta = property(_get_theta)
-    fit = property(_get_fit)
-    loc_fit = property(_get_loc_fit)
-    sigma1 = property(_get_sigma1)
-    sigma2 = property(_get_sigma2)
-    kl_error = property(_get_kl_error)
-
-
 class VariationalFit(object):
     
     def __init__(self, S, family='gaussian',
@@ -247,15 +183,6 @@ class VariationalFit(object):
     kl_error = property(_get_kl_error)
 
 
-class ImportanceSampler(ImportanceFit):    
-    def __init__(self, target, ms, Vs, ndraws=None, reflect=False,
-                 family='gaussian'):
-        S = Sample(target, ms, Vs,
-                   ndraws=ndraws,
-                   reflect=reflect)
-        self._init_from_sample(S, family)
-
-
 class VariationalSampler(VariationalFit):
     def __init__(self, target, ms, Vs, ndraws=None, reflect=False,
                  family='gaussian', tol=1e-5, maxiter=None, minimizer='newton'):
@@ -263,3 +190,76 @@ class VariationalSampler(VariationalFit):
                    ndraws=ndraws,
                    reflect=reflect)
         self._init_from_sample(S, family, tol, maxiter, minimizer)
+
+
+class VariationalFitIS(object):
+
+    def __init__(self, S, family='gaussian'):
+        """
+        Naive variational sampler object.
+        """
+        self._init_from_sample(S, family)
+
+    def _init_from_sample(self, S, family):
+        t0 = time()
+        self.sample = S
+        self.dim = S.x.shape[0]
+        self.npts = S.x.shape[1]
+        
+        # Instantiate fitting family
+        if family not in FAM_IMPL.keys():
+            raise ValueError('unknown family')
+        self.family = FAM_IMPL[family](self.dim)
+        self._cache = {'F': self.family.design_matrix(S.x)}
+
+        # Perform fit
+        self._do_fitting()
+        self.time = time() - t0
+
+    def _do_fitting(self):
+        F = self._cache['F']
+        p = self.sample.p
+        moment = np.dot(F, p) / self.npts
+        self._loc_fit = self.family.from_moment(moment)
+        # Compute variance on moment estimate
+        if moment.ndim == 1:
+            moment = np.reshape(moment, (moment.size, 1))
+        self._sigma1 = np.dot(F * (p ** 2), F.T) / self.npts\
+            - np.dot(moment, moment.T)
+
+    def _get_theta(self):
+        return self._loc_fit.theta - self.sample.kernel.theta
+
+    def _get_fit(self):
+        return self.family.from_theta(theta=self.theta)
+
+    def _get_loc_fit(self):
+        return self._loc_fit
+
+    def _get_sigma1(self):
+        return self._sigma1
+
+    def _get_sigma2(self):
+        F = self._cache['F']
+        q = np.nan_to_num(np.exp(np.dot(F.T, np.nan_to_num(self.theta))))
+        return np.dot(F * q, F.T) / self.npts
+
+    def _get_kl_error(self):
+        return np.trace(self.sigma1 * np.linalg.inv(self.sigma2))\
+            / (2 * self.npts)
+
+    theta = property(_get_theta)
+    fit = property(_get_fit)
+    loc_fit = property(_get_loc_fit)
+    sigma1 = property(_get_sigma1)
+    sigma2 = property(_get_sigma2)
+    kl_error = property(_get_kl_error)
+
+
+class VariationalSamplerIS(VariationalFitIS):    
+    def __init__(self, target, ms, Vs, ndraws=None, reflect=False,
+                 family='gaussian'):
+        S = Sample(target, ms, Vs,
+                   ndraws=ndraws,
+                   reflect=reflect)
+        self._init_from_sample(S, family)

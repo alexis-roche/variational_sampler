@@ -51,8 +51,8 @@ class Sample(object):
 
     def _sample(self, ndraws):
         """
-        Draw values from the specified kernel, compute sampled
-        distribution values and importance weights.
+        Sample independent points from the specified kernel and
+        compute associated distribution values.
         """
         self.x = self.kernel.sample(ndraws=ndraws)
         if self.reflect:

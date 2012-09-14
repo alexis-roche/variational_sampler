@@ -1,9 +1,9 @@
 import numpy as np
-from nose.tools import assert_equal, assert_almost_equal
-from numpy.testing import assert_array_almost_equal
+from nose.tools import assert_equal
+from numpy.testing import assert_almost_equal, assert_array_almost_equal
 
 from ..variational_sampler import (VariationalSampler,
-                                   ImportanceSampler)
+                                   VariationalSamplerIS)
 from ..gaussian import (Gaussian, FactorGaussian)
 
 
@@ -33,11 +33,11 @@ def test2d_vs_basic():
 
 
 def test1d_ds_basic():
-    _test_basic(ImportanceSampler(target1d, 0, 1, ndraws=10))
+    _test_basic(VariationalSamplerIS(target1d, 0, 1, ndraws=10))
 
 
 def test2d_ds_basic():
-    _test_basic(ImportanceSampler(target, np.zeros(2), np.eye(2), ndraws=50))
+    _test_basic(VariationalSamplerIS(target, np.zeros(2), np.eye(2), ndraws=50))
 
 
 def test_loss():
@@ -57,9 +57,9 @@ def _test_vs_exactness(dim):
     g = Gaussian(m, V)
     ndraws = ((dim + 1) * (dim + 2)) / 2
     vs = VariationalSampler(g, m, V, ndraws=ndraws)
-    assert_almost_equal(vs.fit.Z, 1)
-    assert_array_almost_equal(vs.fit.m, m)
-    assert_array_almost_equal(vs.fit.V, V)
+    assert_almost_equal(vs.fit.Z, 1, decimal=2)
+    assert_array_almost_equal(vs.fit.m, m, decimal=2)
+    assert_array_almost_equal(vs.fit.V, V, decimal=2)
 
 
 def test_vs_exactness_2d():
@@ -81,9 +81,9 @@ def _test_vs_exactness_fg(dim):
     ndraws = 2 * dim + 1
     vs = VariationalSampler(g, m, v, ndraws=ndraws,
                             family='factor_gaussian')
-    assert_almost_equal(vs.fit.Z, 1)
-    assert_array_almost_equal(vs.fit.m, m)
-    assert_array_almost_equal(vs.fit.v, v)
+    assert_almost_equal(vs.fit.Z, 1, decimal=2)
+    assert_array_almost_equal(vs.fit.m, m, decimal=2)
+    assert_array_almost_equal(vs.fit.v, v, decimal=2)
 
 
 def test_vs_exactness_fg_2d():
