@@ -21,11 +21,16 @@ def hdot(x, A):
     return np.dot(x, np.dot(A, x))
 
 
-def safe_eigh(A):
+def decomp_sym_matrix(A):
     s, P = eigh(A)
     sign_s = 2. * (s >= 0) - 1
     abs_s = force_tiny(np.abs(s))
     return abs_s, sign_s, P
+
+
+def inv_sym_matrix(A):
+    s, P = eigh(A)
+    return np.dot(P * (1 / force_tiny(s)), P.T)
 
 
 class SteepestDescent(object):
@@ -155,8 +160,7 @@ class QuasiNewtonDescent(SteepestDescent):
 
     def __init__(self, x, f, grad_f, fix_hess_f, maxiter=None, tol=1e-7):
         self._generic_init(x, f, grad_f, maxiter, tol)
-        s, P = eigh(fix_hess_f)
-        self.Hinv = np.dot(P * (1 / force_tiny(s)), P.T)
+        self.Hinv = inv_sym_matrix(fix_hess_f)
         self.run()
     
     def direction(self):

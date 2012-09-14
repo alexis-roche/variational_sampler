@@ -19,8 +19,9 @@ def _test_basic(vs):
     print vs.theta
     print vs.fit
     print vs.loc_fit
-    print vs.sigma1
-    print vs.sigma2
+    print vs.var_moment
+    print vs.fisher_info
+    print vs.var_theta
     print vs.kl_error
 
 

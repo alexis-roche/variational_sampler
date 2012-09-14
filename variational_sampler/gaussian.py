@@ -4,7 +4,7 @@ A class to represent unnormalized Gaussian distributions.
 
 import numpy as np
 
-from .numlib import (hdot, force_tiny, safe_eigh)
+from .numlib import (hdot, force_tiny, decomp_sym_matrix)
 
 
 def Z_to_K(Z, dim, detV):
@@ -73,7 +73,7 @@ class Gaussian(object):
 
         # Compute the inverse and the square root of the variance
         # matrix
-        abs_s, sign_s, P = safe_eigh(V)
+        abs_s, sign_s, P = decomp_sym_matrix(V)
         self._invV = np.dot(np.dot(P, np.diag(sign_s / abs_s)), P.T)
         self._detV = np.prod(abs_s * sign_s)
         self._sqrtV = np.dot(np.dot(P, np.diag(abs_s ** .5)), P.T)
@@ -121,7 +121,7 @@ class Gaussian(object):
         dim = _sample_dim(theta.size)
         self._set_dimensions(dim)
         invV = _theta_to_invV(theta[0:self._dim2])
-        abs_s, sign_s, P = safe_eigh(invV)
+        abs_s, sign_s, P = decomp_sym_matrix(invV)
         self._invV = invV
         inv_s = sign_s / abs_s
         self._V = np.dot(np.dot(P, np.diag(inv_s)), P.T)

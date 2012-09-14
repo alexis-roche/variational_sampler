@@ -1,7 +1,8 @@
 from time import time
 import numpy as np
 
-from .numlib import (SteepestDescent,
+from .numlib import (inv_sym_matrix,
+                     SteepestDescent,
                      ConjugateDescent,
                      NewtonDescent,
                      QuasiNewtonDescent,
@@ -31,6 +32,17 @@ class VariationalFit(object):
                  tol=1e-5, maxiter=None, minimizer='newton'):
         """
         Variational sampler object.
+
+        Parameters
+        ----------
+        tol : float
+          Tolerance on optimized parameter
+
+        maxiter : int
+          Maximum number of iterations in optimization
+
+        minimizer : string
+          One of 'newton', 'quasi_newton', steepest', 'conjugate'
         """
         self._init_from_sample(S, family, tol, maxiter, minimizer)
 
@@ -56,7 +68,10 @@ class VariationalFit(object):
             'log_q': np.zeros(S.p.size)}
 
         # Perform fitting
-        self._do_fitting(tol, maxiter, minimizer)
+        self.minimizer = minimizer
+        self.tol = tol
+        self.maxiter = maxiter
+        self._do_fitting()
         self.time = time() - t0
 
     def _udpate_fit(self, theta):
@@ -108,46 +123,33 @@ class VariationalFit(object):
         c = self._cache
         return np.dot(c['F'] * c['p'], c['F'].T)
 
-    def _sigma1(self, theta):
+    def _var_moment(self, theta):
         c = self._cache
         return np.dot(c['F'] * ((c['p'] - c['q']) ** 2), c['F'].T)\
             / self.npts
 
-    def _sigma2(self, theta):
+    def _fisher_info(self, theta):
         return self._hessian(self.theta) / self.npts
 
-    def _do_fitting(self, tol, maxiter, minimizer):
+    def _do_fitting(self):
         """
         Perform Gaussian approximation.
-
-        Parameters
-        ----------
-        tol : float
-          Tolerance on optimized parameter
-
-        maxiter : int
-          Maximum number of iterations in optimization
-
-        minimizer : string
-          One of 'steepest', 'conjugate', 'newton'
-
-        Returns
-        -------
-        fit : Gaussian object
-          Gaussian fit
         """
         theta = np.zeros(self._cache['F'].shape[0])
+        minimizer = self.minimizer
         if minimizer not in MIN_IMPL.keys():
             raise ValueError('unknown minimizer')
         if minimizer in ('newton', 'ncg'):
             m = MIN_IMPL[minimizer](theta, self._loss, self._gradient,
-                                    self._hessian, maxiter=maxiter, tol=tol)
+                                    self._hessian,
+                                    maxiter=self.maxiter, tol=self.tol)
         elif minimizer in ('quasi_newton',):
             m = MIN_IMPL[minimizer](theta, self._loss, self._gradient,
-                                    self._pseudo_hessian(), maxiter=maxiter, tol=tol)
+                                    self._pseudo_hessian(),
+                                    maxiter=self.maxiter, tol=self.tol)
         else:
             m = MIN_IMPL[minimizer](theta, self._loss, self._gradient,
-                                    maxiter=maxiter, tol=tol)
+                                    maxiter=self.maxiter, tol=self.tol)
         m.message()
         self._theta = m.argmin()
         self.minimizer = m
@@ -162,24 +164,30 @@ class VariationalFit(object):
         return self.family.from_theta(theta=self.theta
                                       + self.sample.kernel.theta)
 
-    def _get_sigma1(self):
-        return self._sigma1(self.theta)
+    def _get_var_moment(self):
+        return self._var_moment(self.theta)
 
-    def _get_sigma2(self):
-        return self._sigma2(self.theta)
+    def _get_fisher_info(self):
+        return self._fisher_info(self.theta)
+
+    def _get_var_theta(self):
+        inv_fisher_info = inv_sym_matrix(self._fisher_info(self.theta))
+        return np.dot(np.dot(inv_fisher_info, self._var_moment(self.theta)),
+                      inv_fisher_info)
 
     def _get_kl_error(self):
         """
         Estimate the expected excess KL divergence.
         """
-        return np.trace(self.sigma1 * np.linalg.inv(self.sigma2))\
+        return np.trace(self.var_moment * inv_sym_matrix(self.fisher_info))\
             / (2 * self.npts)
 
     theta = property(_get_theta)
     fit = property(_get_fit)
     loc_fit = property(_get_loc_fit)
-    sigma1 = property(_get_sigma1)
-    sigma2 = property(_get_sigma2)
+    var_moment = property(_get_var_moment)
+    var_theta = property(_get_var_theta)
+    fisher_info = property(_get_fisher_info)
     kl_error = property(_get_kl_error)
 
 
@@ -224,7 +232,7 @@ class VariationalFitIS(object):
         # Compute variance on moment estimate
         if moment.ndim == 1:
             moment = np.reshape(moment, (moment.size, 1))
-        self._sigma1 = np.dot(F * (p ** 2), F.T) / self.npts\
+        self._var_moment = np.dot(F * (p ** 2), F.T) / self.npts\
             - np.dot(moment, moment.T)
 
     def _get_theta(self):
@@ -236,23 +244,28 @@ class VariationalFitIS(object):
     def _get_loc_fit(self):
         return self._loc_fit
 
-    def _get_sigma1(self):
-        return self._sigma1
+    def _get_var_moment(self):
+        return self._var_moment
 
-    def _get_sigma2(self):
+    def _get_fisher_info(self):
         F = self._cache['F']
         q = np.nan_to_num(np.exp(np.dot(F.T, np.nan_to_num(self.theta))))
         return np.dot(F * q, F.T) / self.npts
 
+    def _get_var_theta(self):
+        inv_fisher_info = inv_sym_matrix(self.fisher_info)
+        return np.dot(np.dot(inv_fisher_info, self._var_moment), inv_fisher_info)
+
     def _get_kl_error(self):
-        return np.trace(self.sigma1 * np.linalg.inv(self.sigma2))\
+        return np.trace(self.var_moment * inv_sym_matrix(self.fisher_info))\
             / (2 * self.npts)
 
     theta = property(_get_theta)
     fit = property(_get_fit)
     loc_fit = property(_get_loc_fit)
-    sigma1 = property(_get_sigma1)
-    sigma2 = property(_get_sigma2)
+    var_moment = property(_get_var_moment)
+    var_theta = property(_get_var_theta)
+    fisher_info = property(_get_fisher_info)
     kl_error = property(_get_kl_error)
 
 
