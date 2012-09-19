@@ -57,12 +57,12 @@ bs = VariationalFitBMC(s, var=v)
 gs_loc_fit = gauss_hermite(target, h2, 250)
 gh_loc_fit = gauss_hermite(target, h2, NPTS)
 
-print ('Error for VS: %f (expected: %f)'\
-           % (gs_loc_fit.kl_div(vs.loc_fit), vs.kl_error))
-print ('Error for IS: %f (expected: %f)'\
+print('Error for VS: %f (expected: %f)'\
+          % (gs_loc_fit.kl_div(vs.loc_fit), vs.kl_error))
+print('Error for IS: %f (expected: %f)'\
            % (gs_loc_fit.kl_div(ds.loc_fit), ds.kl_error))
-print ('Error for BMC: %f'% gs_loc_fit.kl_div(bs.loc_fit))
-print ('Error for GH: %f' % gs_loc_fit.kl_div(gh_loc_fit))
+print('Error for BMC: %f'% gs_loc_fit.kl_div(bs.loc_fit))
+print('Error for GH: %f' % gs_loc_fit.kl_div(gh_loc_fit))
 
 
 display_fits(vs.sample.x, target, (vs, ds, bs), 

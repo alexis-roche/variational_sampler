@@ -16,13 +16,13 @@ def target(x):
 
 
 def _test_basic(vs):
-    print vs.theta
-    print vs.fit
-    print vs.loc_fit
-    print vs.var_moment
-    print vs.fisher_info
-    print vs.var_theta
-    print vs.kl_error
+    print(vs.theta)
+    print(vs.fit)
+    print(vs.loc_fit)
+    print(vs.var_moment)
+    print(vs.fisher_info)
+    print(vs.var_theta)
+    print(vs.kl_error)
 
 
 def test1d_vs_basic():
@@ -47,8 +47,8 @@ def test_loss():
     vs._cache['log_q'][:] = -np.inf
     vs._cache['theta'] = None
     assert_equal(vs._loss(None), np.inf)
-    print vs._loss(np.array((0, 0, -2500)))
-    print vs._loss(np.array((0, 0, -1e10)))
+    print(vs._loss(np.array((0, 0, -2500))))
+    print(vs._loss(np.array((0, 0, -1e10))))
 
 
 def _test_vs_exactness(dim):
