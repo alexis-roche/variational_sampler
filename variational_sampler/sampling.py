@@ -58,5 +58,6 @@ class Sample(object):
         if self.reflect:
             self.x = reflect_sample(self.x)
         self.p = self.target(self.x).squeeze()
+        self.w = None
 
 

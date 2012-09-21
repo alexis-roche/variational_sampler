@@ -6,7 +6,7 @@ from .gaussian import FactorGaussian
 from .gaussian_mixture import GaussianMixture
 
 
-class VariationalFitBMC(object):
+class BayesianMonteCarloFit(object):
 
     def __init__(self, S, var=1, damping=1e-5):
         """
@@ -77,7 +77,7 @@ class VariationalFitBMC(object):
     loc_fit = property(_get_loc_fit)
 
 
-class VariationalSamplerBMC(VariationalFitBMC):    
+class BayesianMonteCarloSampler(BayesianMonteCarloFit):    
     def __init__(self, target, ms, Vs, ndraws=None, reflect=False,
                  var=1, damping=1e-5):
         S = Sample(target, ms, Vs,

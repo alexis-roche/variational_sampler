@@ -3,8 +3,8 @@ import pylab as plt
 from scipy.special.orthogonal import h_roots
 
 from variational_sampler.variational_sampler import (VariationalFit,
-                                                     VariationalFitIS)
-from variational_sampler.bayesian_monte_carlo import VariationalFitBMC
+                                                     ClassicalFit)
+from variational_sampler.bayesian_monte_carlo import BayesianMonteCarloFit
 from variational_sampler.gaussian import Gaussian
 from variational_sampler.sampling import Sample
 from variational_sampler.toy_examples import ExponentialPowerLaw
@@ -51,22 +51,22 @@ h2 = 10 * v
 
 s = Sample(target, 0, h2, ndraws=NPTS)
 vs = VariationalFit(s, maxiter=10)
-ds = VariationalFitIS(s)
-bs = VariationalFitBMC(s, var=v)
+cs = ClassicalFit(s)
+bs = BayesianMonteCarloFit(s, var=v)
 
 gs_loc_fit = gauss_hermite(target, h2, 250)
 gh_loc_fit = gauss_hermite(target, h2, NPTS)
 
 print('Error for VS: %f (expected: %f)'\
           % (gs_loc_fit.kl_div(vs.loc_fit), vs.kl_error))
-print('Error for IS: %f (expected: %f)'\
-           % (gs_loc_fit.kl_div(ds.loc_fit), ds.kl_error))
+print('Error for CS: %f (expected: %f)'\
+           % (gs_loc_fit.kl_div(cs.loc_fit), cs.kl_error))
 print('Error for BMC: %f'% gs_loc_fit.kl_div(bs.loc_fit))
 print('Error for GH: %f' % gs_loc_fit.kl_div(gh_loc_fit))
 
 
-display_fits(vs.sample.x, target, (vs, ds, bs), 
-             ('blue', 'orange', 'green'), ('VS', 'IS', 'BMC'))
-display_fits(vs.sample.x, target, (vs, ds, bs),
-             ('blue', 'orange', 'green'), ('VS', 'IS', 'BMC'),
+display_fits(vs.sample.x, target, (vs, cs, bs), 
+             ('blue', 'orange', 'green'), ('VS', 'CS', 'BMC'))
+display_fits(vs.sample.x, target, (vs, cs, bs),
+             ('blue', 'orange', 'green'), ('VS', 'CS', 'BMC'),
              local=True)

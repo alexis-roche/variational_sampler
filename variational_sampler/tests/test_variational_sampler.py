@@ -3,7 +3,7 @@ from nose.tools import assert_equal
 from numpy.testing import assert_almost_equal, assert_array_almost_equal
 
 from ..variational_sampler import (VariationalSampler,
-                                   VariationalSamplerIS)
+                                   ClassicalSampler)
 from ..gaussian import (Gaussian, FactorGaussian)
 
 
@@ -33,12 +33,12 @@ def test2d_vs_basic():
     _test_basic(VariationalSampler(target, np.zeros(2), np.eye(2), ndraws=50))
 
 
-def test1d_ds_basic():
-    _test_basic(VariationalSamplerIS(target1d, 0, 1, ndraws=10))
+def test1d_cs_basic():
+    _test_basic(ClassicalSampler(target1d, 0, 1, ndraws=10))
 
 
-def test2d_ds_basic():
-    _test_basic(VariationalSamplerIS(target, np.zeros(2), np.eye(2), ndraws=50))
+def test2d_cs_basic():
+    _test_basic(ClassicalSampler(target, np.zeros(2), np.eye(2), ndraws=50))
 
 
 def test_loss():

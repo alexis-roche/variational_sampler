@@ -59,13 +59,16 @@ class VariationalFit(object):
         if family not in FAM_IMPL.keys():
             raise ValueError('unknown family')
         self.family = FAM_IMPL[family](self.dim)
+        p = S.p
+        if not S.w is None:
+            p *= S.w
         self._cache = {
             'theta': None,
             'F': self.family.design_matrix(S.x),
-            'p': S.p,
-            'log_p': np.nan_to_num(np.log(S.p)),
-            'q': np.zeros(S.p.size),
-            'log_q': np.zeros(S.p.size)}
+            'p': p,
+            'log_p': np.nan_to_num(np.log(p)),
+            'q': np.zeros(p.size),
+            'log_q': np.zeros(p.size)}
 
         # Perform fitting
         self.minimizer = minimizer
@@ -82,6 +85,8 @@ class VariationalFit(object):
         if not theta is c['theta']:
             c['log_q'][:] = np.dot(c['F'].T, np.nan_to_num(theta))
             c['q'][:] = np.nan_to_num(np.exp(c['log_q']))
+            if not self.sample.w is None:
+                c['q'] *= sefl.sample.w
             c['theta'] = theta
 
     def _loss(self, theta):
@@ -200,7 +205,7 @@ class VariationalSampler(VariationalFit):
         self._init_from_sample(S, family, tol, maxiter, minimizer)
 
 
-class VariationalFitIS(object):
+class ClassicalFit(object):
 
     def __init__(self, S, family='gaussian'):
         """
@@ -227,6 +232,8 @@ class VariationalFitIS(object):
     def _do_fitting(self):
         F = self._cache['F']
         p = self.sample.p
+        if not self.sample.w is None:
+            p *= self.sample.w
         moment = np.dot(F, p) / self.npts
         self._loc_fit = self.family.from_moment(moment)
         # Compute variance on moment estimate
@@ -269,7 +276,7 @@ class VariationalFitIS(object):
     kl_error = property(_get_kl_error)
 
 
-class VariationalSamplerIS(VariationalFitIS):    
+class ClassicalSampler(ClassicalFit):    
     def __init__(self, target, ms, Vs, ndraws=None, reflect=False,
                  family='gaussian'):
         S = Sample(target, ms, Vs,
