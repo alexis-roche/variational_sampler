@@ -14,31 +14,47 @@ def reflect_sample(xs):
                       [xs.shape[0], 2 * xs.shape[1]])
 
 
+def as_gaussian(g):
+    if isinstance(g, Gaussian) or isinstance(g, FactorGaussian):
+        return g
+    try:
+        m = np.asarray(g[0])
+        V = np.asarray(g[1])
+        if V.ndim < 2:
+            G = FactorGaussian(m, V)
+        elif V.ndim == 2:
+            G = Gaussian(m, V)
+        else:
+            raise ValueError('input variance not understood')
+    except:
+        raiseValueError('input not understood')
+    return G
+
+
 class Sample(object):
 
-    def __init__(self, target, ms, Vs, ndraws=None, reflect=False):
+    def __init__(self, kernel, ndraws=None, reflect=False):
         """
         Instantiate Sample class.
 
+        Given a kernel w(x), a sample (x1, x2, ..., xn) is generated
+        such that, for any function f(x), the integral
+
+        int w(x)f(x)dx 
+
+        is approximated by the empirical mean
+
+        (1/n) sum f(xi)
+
         Parameters
         ----------
-        target : function
-          target distribution
-        ms : vector
-          mean of the sampling kernel
-        Vs : matrix
-          variance of the sampling kernel
-
+        kernel: tuple
+          a tuple (ms, Vs) where ms is a vector representing the mean
+          of the sampling kernel and Vs is a matrix or vector
+          representing the variance (if a vector, then a diagonal
+          variance is assumed)
         """
-        self.target = target
-        ms = np.asarray(ms)
-        Vs = np.asarray(Vs)
-        if Vs.ndim < 2:
-            self.kernel = FactorGaussian(ms, Vs)
-        elif Vs.ndim == 2:
-            self.kernel = Gaussian(ms, Vs)
-        else:
-            raise ValueError('input variance not understood')
+        self.kernel = as_gaussian(kernel)
         self.reflect = reflect
         if ndraws == None:
             ndraws = self.kernel.theta_dim
@@ -57,7 +73,4 @@ class Sample(object):
         self.x = self.kernel.sample(ndraws=ndraws)
         if self.reflect:
             self.x = reflect_sample(self.x)
-        self.p = self.target(self.x).squeeze()
         self.w = None
-
-

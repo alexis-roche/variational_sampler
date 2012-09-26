@@ -26,23 +26,23 @@ def _test_basic(vs):
 
 
 def test1d_vs_basic():
-    _test_basic(VariationalSampler(target1d, 0, 1, ndraws=10))
+    _test_basic(VariationalSampler(target1d, (0, 1), ndraws=10))
 
 
 def test2d_vs_basic():
-    _test_basic(VariationalSampler(target, np.zeros(2), np.eye(2), ndraws=50))
+    _test_basic(VariationalSampler(target, (np.zeros(2), np.eye(2)), ndraws=50))
 
 
 def test1d_cs_basic():
-    _test_basic(ClassicalSampler(target1d, 0, 1, ndraws=10))
+    _test_basic(ClassicalSampler(target1d, (0, 1), ndraws=10))
 
 
 def test2d_cs_basic():
-    _test_basic(ClassicalSampler(target, np.zeros(2), np.eye(2), ndraws=50))
+    _test_basic(ClassicalSampler(target, (np.zeros(2), np.eye(2)), ndraws=50))
 
 
 def test_loss():
-    vs = VariationalSampler(target1d, 0, 1, ndraws=10)
+    vs = VariationalSampler(target1d, (0, 1), ndraws=10)
     vs._cache['q'][:] = 0
     vs._cache['log_q'][:] = -np.inf
     vs._cache['theta'] = None
@@ -57,7 +57,7 @@ def _test_vs_exactness(dim):
     V = np.dot(A, A.T)
     g = Gaussian(m, V)
     ndraws = ((dim + 1) * (dim + 2)) / 2
-    vs = VariationalSampler(g, m, V, ndraws=ndraws)
+    vs = VariationalSampler(g, g, ndraws=ndraws)
     assert_almost_equal(vs.fit.Z, 1, decimal=2)
     assert_array_almost_equal(vs.fit.m, m, decimal=2)
     assert_array_almost_equal(vs.fit.V, V, decimal=2)
@@ -80,7 +80,7 @@ def _test_vs_exactness_fg(dim):
     v = np.random.random(dim) ** 2
     g = FactorGaussian(m, v)
     ndraws = 2 * dim + 1
-    vs = VariationalSampler(g, m, v, ndraws=ndraws,
+    vs = VariationalSampler(g, g, ndraws=ndraws,
                             family='factor_gaussian')
     assert_almost_equal(vs.fit.Z, 1, decimal=2)
     assert_array_almost_equal(vs.fit.m, m, decimal=2)

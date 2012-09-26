@@ -14,7 +14,7 @@ NPTS = DIM ** 2
 target = ExponentialPowerLaw(beta=BETA, dim=DIM)
 h2 = np.diagonal(target.V)
 
-s = Sample(target, np.zeros(DIM), h2, ndraws=NPTS)
-vs = VariationalFit(s)
-ds = ClassicalFit(s)
-bs = BayesianMonteCarloFit(s, var=h2)
+s = Sample((np.zeros(DIM), h2), ndraws=NPTS)
+vs = VariationalFit(target, s)
+ds = ClassicalFit(target, s)
+bs = BayesianMonteCarloFit(target, s, var=h2)

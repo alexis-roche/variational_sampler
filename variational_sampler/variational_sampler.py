@@ -28,7 +28,7 @@ FAM_IMPL = {'gaussian': GaussianFamily,
 
 class VariationalFit(object):
     
-    def __init__(self, S, family='gaussian',
+    def __init__(self, target, S, family='gaussian',
                  tol=1e-5, maxiter=None, minimizer='newton'):
         """
         Variational sampler object.
@@ -44,13 +44,14 @@ class VariationalFit(object):
         minimizer : string
           One of 'newton', 'quasi_newton', steepest', 'conjugate'
         """
-        self._init_from_sample(S, family, tol, maxiter, minimizer)
+        self._init_from_sample(target, S, family, tol, maxiter, minimizer)
 
-    def _init_from_sample(self, S, family, tol, maxiter, minimizer):
+    def _init_from_sample(self, target, S, family, tol, maxiter, minimizer):
         """
         Init object given a sample instance.
         """
         t0 = time()
+        self.target = target
         self.sample = S
         self.dim = S.x.shape[0]
         self.npts = S.x.shape[1]
@@ -59,7 +60,7 @@ class VariationalFit(object):
         if family not in FAM_IMPL.keys():
             raise ValueError('unknown family')
         self.family = FAM_IMPL[family](self.dim)
-        p = S.p
+        p = self.target(S.x).squeeze()
         if not S.w is None:
             p *= S.w
         self._cache = {
@@ -197,24 +198,23 @@ class VariationalFit(object):
 
 
 class VariationalSampler(VariationalFit):
-    def __init__(self, target, ms, Vs, ndraws=None, reflect=False,
+    def __init__(self, target, kernel, ndraws=None, reflect=False,
                  family='gaussian', tol=1e-5, maxiter=None, minimizer='newton'):
-        S = Sample(target, ms, Vs,
-                   ndraws=ndraws,
-                   reflect=reflect)
-        self._init_from_sample(S, family, tol, maxiter, minimizer)
+        S = Sample(kernel, ndraws=ndraws, reflect=reflect)
+        self._init_from_sample(target, S, family, tol, maxiter, minimizer)
 
 
 class ClassicalFit(object):
 
-    def __init__(self, S, family='gaussian'):
+    def __init__(self, target, S, family='gaussian'):
         """
         Naive variational sampler object.
         """
-        self._init_from_sample(S, family)
+        self._init_from_sample(target, S, family)
 
-    def _init_from_sample(self, S, family):
+    def _init_from_sample(self, target, S, family):
         t0 = time()
+        self.target = target
         self.sample = S
         self.dim = S.x.shape[0]
         self.npts = S.x.shape[1]
@@ -231,7 +231,7 @@ class ClassicalFit(object):
 
     def _do_fitting(self):
         F = self._cache['F']
-        p = self.sample.p
+        p = self.target(self.sample.x).squeeze()
         if not self.sample.w is None:
             p *= self.sample.w
         moment = np.dot(F, p) / self.npts
@@ -276,10 +276,8 @@ class ClassicalFit(object):
     kl_error = property(_get_kl_error)
 
 
-class ClassicalSampler(ClassicalFit):    
-    def __init__(self, target, ms, Vs, ndraws=None, reflect=False,
+class ClassicalSampler(ClassicalFit):  
+    def __init__(self, target, kernel, ndraws=None, reflect=False,
                  family='gaussian'):
-        S = Sample(target, ms, Vs,
-                   ndraws=ndraws,
-                   reflect=reflect)
-        self._init_from_sample(S, family)
+        S = Sample(kernel, ndraws=ndraws, reflect=reflect)
+        self._init_from_sample(target, S, family)

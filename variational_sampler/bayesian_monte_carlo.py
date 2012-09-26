@@ -8,7 +8,7 @@ from .gaussian_mixture import GaussianMixture
 
 class BayesianMonteCarloFit(object):
 
-    def __init__(self, S, var=1, damping=1e-5):
+    def __init__(self, target, S, var=1, damping=1e-5):
         """
         Bayesian quadrature using Gaussian kernels (Bayesian Monte
         Carlo method).
@@ -29,10 +29,11 @@ class BayesianMonteCarloFit(object):
         damping : float
           Damping factor used for regularization to avoid ill-conditioning
         """
-        self._init_from_sample(S, var, damping)
+        self._init_from_sample(target, S, var, damping)
 
-    def _init_from_sample(self, S, var, damping):
+    def _init_from_sample(self, target, S, var, damping):
         t0 = time()
+        self.target = target
         self.sample = S
         self.dim = S.x.shape[0]
         self.npts = S.x.shape[1]
@@ -57,7 +58,8 @@ class BayesianMonteCarloFit(object):
 
         # Solve for the spline coefficients and compute model evidence
         L, lower = cho_factor(G, lower=0)
-        self._theta = cho_solve((L, 0), self.sample.p)
+        p = self.target(self.sample.x).squeeze()
+        self._theta = cho_solve((L, 0), p)
 
     def _get_theta(self):
         return self._theta
@@ -78,9 +80,7 @@ class BayesianMonteCarloFit(object):
 
 
 class BayesianMonteCarloSampler(BayesianMonteCarloFit):    
-    def __init__(self, target, ms, Vs, ndraws=None, reflect=False,
+    def __init__(self, target, kernel, ndraws=None, reflect=False,
                  var=1, damping=1e-5):
-        S = Sample(target, ms, Vs,
-                   ndraws=ndraws,
-                   reflect=reflect)
-        self._init_from_sample(S, var, damping)
+        S = Sample(kernel, ndraws=ndraws, reflect=reflect)
+        self._init_from_sample(target, S, var, damping)

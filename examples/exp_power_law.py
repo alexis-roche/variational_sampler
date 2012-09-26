@@ -9,8 +9,8 @@ from variational_sampler.gaussian import Gaussian
 from variational_sampler.sampling import Sample
 from variational_sampler.toy_examples import ExponentialPowerLaw
 
-BETA = 1
-NPTS = 100
+BETA = .5
+NPTS = 10
 
 def gauss_hermite(target, h2, npts):
     x, w = h_roots(npts)
@@ -49,10 +49,10 @@ target = ExponentialPowerLaw(beta=BETA)
 v = target.V.squeeze()
 h2 = 10 * v
 
-s = Sample(target, 0, h2, ndraws=NPTS)
-vs = VariationalFit(s, maxiter=10)
-cs = ClassicalFit(s)
-bs = BayesianMonteCarloFit(s, var=v)
+s = Sample((0, h2), ndraws=NPTS)
+vs = VariationalFit(target, s, maxiter=10)
+cs = ClassicalFit(target, s)
+bs = BayesianMonteCarloFit(target, s, var=v)
 
 gs_loc_fit = gauss_hermite(target, h2, 250)
 gh_loc_fit = gauss_hermite(target, h2, NPTS)
