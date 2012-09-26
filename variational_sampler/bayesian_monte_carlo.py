@@ -8,7 +8,7 @@ from .gaussian_mixture import GaussianMixture
 
 class BayesianMonteCarloFit(object):
 
-    def __init__(self, target, S, var=1, damping=1e-5):
+    def __init__(self, target, sample, var=1, damping=1e-5):
         """
         Bayesian quadrature using Gaussian kernels (Bayesian Monte
         Carlo method).
@@ -17,7 +17,7 @@ class BayesianMonteCarloFit(object):
         
         Parameters
         ----------
-        S : Sample object
+        sample : Sample object
           Input sample
         
         var : float or array
@@ -29,14 +29,14 @@ class BayesianMonteCarloFit(object):
         damping : float
           Damping factor used for regularization to avoid ill-conditioning
         """
-        self._init_from_sample(target, S, var, damping)
+        self._init_from_sample(target, sample, var, damping)
 
-    def _init_from_sample(self, target, S, var, damping):
+    def _init_from_sample(self, target, sample, var, damping):
         t0 = time()
         self.target = target
-        self.sample = S
-        self.dim = S.x.shape[0]
-        self.npts = S.x.shape[1]
+        self.sample = sample
+        self.dim = sample.x.shape[0]
+        self.npts = sample.x.shape[1]
         var = np.asarray(var)
         if var.size == 1:
             self._v = np.zeros(self.dim)

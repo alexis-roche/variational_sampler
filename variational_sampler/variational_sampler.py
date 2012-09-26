@@ -28,7 +28,7 @@ FAM_IMPL = {'gaussian': GaussianFamily,
 
 class VariationalFit(object):
     
-    def __init__(self, target, S, family='gaussian',
+    def __init__(self, target, sample, family='gaussian',
                  tol=1e-5, maxiter=None, minimizer='newton'):
         """
         Variational sampler object.
@@ -44,28 +44,28 @@ class VariationalFit(object):
         minimizer : string
           One of 'newton', 'quasi_newton', steepest', 'conjugate'
         """
-        self._init_from_sample(target, S, family, tol, maxiter, minimizer)
+        self._init_from_sample(target, sample, family, tol, maxiter, minimizer)
 
-    def _init_from_sample(self, target, S, family, tol, maxiter, minimizer):
+    def _init_from_sample(self, target, sample, family, tol, maxiter, minimizer):
         """
         Init object given a sample instance.
         """
         t0 = time()
         self.target = target
-        self.sample = S
-        self.dim = S.x.shape[0]
-        self.npts = S.x.shape[1]
+        self.sample = sample
+        self.dim = sample.x.shape[0]
+        self.npts = sample.x.shape[1]
 
         # Instantiate fitting family
         if family not in FAM_IMPL.keys():
             raise ValueError('unknown family')
         self.family = FAM_IMPL[family](self.dim)
-        p = self.target(S.x).squeeze()
-        if not S.w is None:
-            p *= S.w
+        p = self.target(sample.x).squeeze()
+        if not sample.w is None:
+            p *= sample.w
         self._cache = {
             'theta': None,
-            'F': self.family.design_matrix(S.x),
+            'F': self.family.design_matrix(sample.x),
             'p': p,
             'log_p': np.nan_to_num(np.log(p)),
             'q': np.zeros(p.size),
@@ -206,24 +206,24 @@ class VariationalSampler(VariationalFit):
 
 class ClassicalFit(object):
 
-    def __init__(self, target, S, family='gaussian'):
+    def __init__(self, target, sample, family='gaussian'):
         """
         Naive variational sampler object.
         """
-        self._init_from_sample(target, S, family)
+        self._init_from_sample(target, sample, family)
 
-    def _init_from_sample(self, target, S, family):
+    def _init_from_sample(self, target, sample, family):
         t0 = time()
         self.target = target
-        self.sample = S
-        self.dim = S.x.shape[0]
-        self.npts = S.x.shape[1]
+        self.sample = sample
+        self.dim = sample.x.shape[0]
+        self.npts = sample.x.shape[1]
         
         # Instantiate fitting family
         if family not in FAM_IMPL.keys():
             raise ValueError('unknown family')
         self.family = FAM_IMPL[family](self.dim)
-        self._cache = {'F': self.family.design_matrix(S.x)}
+        self._cache = {'F': self.family.design_matrix(sample.x)}
 
         # Perform fit
         self._do_fitting()
