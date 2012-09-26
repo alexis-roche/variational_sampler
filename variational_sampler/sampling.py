@@ -33,7 +33,7 @@ def as_gaussian(g):
 
 class Sample(object):
 
-    def __init__(self, kernel, ndraws=None, reflect=False):
+    def __init__(self, kernel, generator=None, ndraws=None, reflect=False):
         """
         Instantiate Sample class.
 
@@ -44,7 +44,9 @@ class Sample(object):
 
         is approximated by the empirical mean
 
-        (1/n) sum f(xi)
+        (1/n) sum ci f(xi),
+
+        where ci are appropriate weights.
 
         Parameters
         ----------
@@ -55,6 +57,10 @@ class Sample(object):
           variance is assumed)
         """
         self.kernel = as_gaussian(kernel)
+        if generator == None:
+            self.generator = self.kernel
+        else:
+            self.generator = as_gaussian(generator)
         self.reflect = reflect
         if ndraws == None:
             ndraws = self.kernel.theta_dim
@@ -70,7 +76,10 @@ class Sample(object):
         Sample independent points from the specified kernel and
         compute associated distribution values.
         """
-        self.x = self.kernel.sample(ndraws=ndraws)
+        self.x = self.generator.sample(ndraws=ndraws)
         if self.reflect:
             self.x = reflect_sample(self.x)
-        self.w = None
+        if self.generator is self.kernel:
+            self.w = None
+        else:
+            self.w = self.kernel(self.x) / self.generator(self.x)
