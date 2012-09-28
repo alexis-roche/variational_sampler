@@ -87,7 +87,7 @@ class VariationalFit(object):
             c['log_q'][:] = np.dot(c['F'].T, np.nan_to_num(theta))
             c['q'][:] = np.nan_to_num(np.exp(c['log_q']))
             if not self.sample.w is None:
-                c['q'] *= sefl.sample.w
+                c['q'] *= self.sample.w
             c['theta'] = theta
 
     def _loss(self, theta):
@@ -198,9 +198,9 @@ class VariationalFit(object):
 
 
 class VariationalSampler(VariationalFit):
-    def __init__(self, target, kernel, ndraws=None, reflect=False,
+    def __init__(self, target, kernel, generator=None, ndraws=None, reflect=False,
                  family='gaussian', tol=1e-5, maxiter=None, minimizer='newton'):
-        S = Sample(kernel, ndraws=ndraws, reflect=reflect)
+        S = Sample(kernel, generator=generator, ndraws=ndraws, reflect=reflect)
         self._init_from_sample(target, S, family, tol, maxiter, minimizer)
 
 
@@ -277,7 +277,7 @@ class ClassicalFit(object):
 
 
 class ClassicalSampler(ClassicalFit):  
-    def __init__(self, target, kernel, ndraws=None, reflect=False,
+    def __init__(self, target, kernel, generator=None, ndraws=None, reflect=False,
                  family='gaussian'):
-        S = Sample(kernel, ndraws=ndraws, reflect=reflect)
+        S = Sample(kernel, generator=generator, ndraws=ndraws, reflect=reflect)
         self._init_from_sample(target, S, family)

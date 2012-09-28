@@ -75,7 +75,7 @@ def test_vs_exactness_5d():
     _test_vs_exactness(5)
 
 
-def _test_vs_exactness_fg(dim):
+def _test_vs_exactness_factor_gauss(dim):
     m = np.zeros(dim)
     v = np.random.random(dim) ** 2
     g = FactorGaussian(m, v)
@@ -87,14 +87,36 @@ def _test_vs_exactness_fg(dim):
     assert_array_almost_equal(vs.fit.v, v, decimal=2)
 
 
-def test_vs_exactness_fg_2d():
-    _test_vs_exactness_fg(2)
+def test_vs_exactness_factor_gauss_2d():
+    _test_vs_exactness_factor_gauss(2)
 
 
-def test_vs_exactness_fg_3d():
-    _test_vs_exactness_fg(3)
+def test_vs_exactness_factor_gauss_3d():
+    _test_vs_exactness_factor_gauss(3)
 
 
-def test_vs_exactness_fg_5d():
-    _test_vs_exactness_fg(5)
+def test_vs_exactness_factor_gauss_5d():
+    _test_vs_exactness_factor_gauss(5)
 
+
+def test1d_vs_custom_generator():
+    _test_basic(VariationalSampler(target1d, (0, 1),
+                                   generator=(1, 2),
+                                   ndraws=10))
+
+def test2d_vs_custom_generator():
+    _test_basic(VariationalSampler(target, (np.zeros(2), np.eye(2)),
+                                   generator=(np.ones(2), 2 * np.eye(2)),
+                                   ndraws=50))
+
+
+def test1d_cs_custom_generator():
+    _test_basic(ClassicalSampler(target1d, (0, 1),
+                                 generator=(1, 2),
+                                 ndraws=10))
+
+
+def test2d_cs_custom_generator():
+    _test_basic(ClassicalSampler(target, (np.zeros(2), np.eye(2)),
+                                 generator=(np.ones(2), 2 * np.eye(2)),
+                                 ndraws=50))
