@@ -1,5 +1,5 @@
 from .variational_sampler import (VariationalSampler,
-                                  ClassicalSampler)
+                                  ImportanceSampler)
 
 from numpy.testing import Tester
 test = Tester().test

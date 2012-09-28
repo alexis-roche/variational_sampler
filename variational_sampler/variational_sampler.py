@@ -11,19 +11,16 @@ from .sampling import Sample
 from .gaussian import (GaussianFamily,
                        FactorGaussianFamily)
 
-MIN_IMPL = {'steepest': SteepestDescent,
-            'conjugate': ConjugateDescent,
-            'newton': NewtonDescent,
-            'quasi_newton': QuasiNewtonDescent,
-            'cg': ScipyCG,
-            'ncg': ScipyNCG,
-            'bfgs': ScipyBFGS
-            }
+MINIMIZER_IMPL = {'steepest': SteepestDescent,
+                  'conjugate': ConjugateDescent,
+                  'newton': NewtonDescent,
+                  'quasi_newton': QuasiNewtonDescent,
+                  'cg': ScipyCG,
+                  'ncg': ScipyNCG,
+                  'bfgs': ScipyBFGS}
 
-
-FAM_IMPL = {'gaussian': GaussianFamily,
-            'factor_gaussian': FactorGaussianFamily
-            }
+FAMILY_IMPL = {'gaussian': GaussianFamily,
+               'factor_gaussian': FactorGaussianFamily}
 
 
 class VariationalFit(object):
@@ -57,9 +54,9 @@ class VariationalFit(object):
         self.npts = sample.x.shape[1]
 
         # Instantiate fitting family
-        if family not in FAM_IMPL.keys():
+        if family not in FAMILY_IMPL.keys():
             raise ValueError('unknown family')
-        self.family = FAM_IMPL[family](self.dim)
+        self.family = FAMILY_IMPL[family](self.dim)
         p = self.target(sample.x).squeeze()
         if not sample.w is None:
             p *= sample.w
@@ -143,19 +140,19 @@ class VariationalFit(object):
         """
         theta = np.zeros(self._cache['F'].shape[0])
         minimizer = self.minimizer
-        if minimizer not in MIN_IMPL.keys():
+        if minimizer not in MINIMIZER_IMPL.keys():
             raise ValueError('unknown minimizer')
         if minimizer in ('newton', 'ncg'):
-            m = MIN_IMPL[minimizer](theta, self._loss, self._gradient,
-                                    self._hessian,
-                                    maxiter=self.maxiter, tol=self.tol)
+            m = MINIMIZER_IMPL[minimizer](theta, self._loss, self._gradient,
+                                          self._hessian,
+                                          maxiter=self.maxiter, tol=self.tol)
         elif minimizer in ('quasi_newton',):
-            m = MIN_IMPL[minimizer](theta, self._loss, self._gradient,
-                                    self._pseudo_hessian(),
-                                    maxiter=self.maxiter, tol=self.tol)
+            m = MINIMIZER_IMPL[minimizer](theta, self._loss, self._gradient,
+                                          self._pseudo_hessian(),
+                                          maxiter=self.maxiter, tol=self.tol)
         else:
-            m = MIN_IMPL[minimizer](theta, self._loss, self._gradient,
-                                    maxiter=self.maxiter, tol=self.tol)
+            m = MINIMIZER_IMPL[minimizer](theta, self._loss, self._gradient,
+                                          maxiter=self.maxiter, tol=self.tol)
         m.message()
         self._theta = m.argmin()
         self.minimizer = m
@@ -204,7 +201,7 @@ class VariationalSampler(VariationalFit):
         self._init_from_sample(target, S, family, tol, maxiter, minimizer)
 
 
-class ClassicalFit(object):
+class StraightFit(object):
 
     def __init__(self, target, sample, family='gaussian'):
         """
@@ -220,9 +217,9 @@ class ClassicalFit(object):
         self.npts = sample.x.shape[1]
         
         # Instantiate fitting family
-        if family not in FAM_IMPL.keys():
+        if family not in FAMILY_IMPL.keys():
             raise ValueError('unknown family')
-        self.family = FAM_IMPL[family](self.dim)
+        self.family = FAMILY_IMPL[family](self.dim)
         self._cache = {'F': self.family.design_matrix(sample.x)}
 
         # Perform fit
@@ -276,8 +273,9 @@ class ClassicalFit(object):
     kl_error = property(_get_kl_error)
 
 
-class ClassicalSampler(ClassicalFit):  
+class ImportanceSampler(StraightFit):  
     def __init__(self, target, kernel, generator=None, ndraws=None, reflect=False,
                  family='gaussian'):
         S = Sample(kernel, generator=generator, ndraws=ndraws, reflect=reflect)
         self._init_from_sample(target, S, family)
+

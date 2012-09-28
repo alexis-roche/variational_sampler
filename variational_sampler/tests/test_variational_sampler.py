@@ -3,7 +3,7 @@ from nose.tools import assert_equal
 from numpy.testing import assert_almost_equal, assert_array_almost_equal
 
 from ..variational_sampler import (VariationalSampler,
-                                   ClassicalSampler)
+                                   ImportanceSampler)
 from ..gaussian import (Gaussian, FactorGaussian)
 
 
@@ -34,11 +34,11 @@ def test2d_vs_basic():
 
 
 def test1d_cs_basic():
-    _test_basic(ClassicalSampler(target1d, (0, 1), ndraws=10))
+    _test_basic(ImportanceSampler(target1d, (0, 1), ndraws=10))
 
 
 def test2d_cs_basic():
-    _test_basic(ClassicalSampler(target, (np.zeros(2), np.eye(2)), ndraws=50))
+    _test_basic(ImportanceSampler(target, (np.zeros(2), np.eye(2)), ndraws=50))
 
 
 def test_loss():
@@ -111,12 +111,12 @@ def test2d_vs_custom_generator():
 
 
 def test1d_cs_custom_generator():
-    _test_basic(ClassicalSampler(target1d, (0, 1),
-                                 generator=(1, 2),
-                                 ndraws=10))
+    _test_basic(ImportanceSampler(target1d, (0, 1),
+                                  generator=(1, 2),
+                                  ndraws=10))
 
 
 def test2d_cs_custom_generator():
-    _test_basic(ClassicalSampler(target, (np.zeros(2), np.eye(2)),
-                                 generator=(np.ones(2), 2 * np.eye(2)),
-                                 ndraws=50))
+    _test_basic(ImportanceSampler(target, (np.zeros(2), np.eye(2)),
+                                  generator=(np.ones(2), 2 * np.eye(2)),
+                                  ndraws=50))

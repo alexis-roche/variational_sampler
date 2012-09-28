@@ -6,7 +6,7 @@ from .gaussian import FactorGaussian
 from .gaussian_mixture import GaussianMixture
 
 
-class BayesianMonteCarloFit(object):
+class GaussianProcessFit(object):
 
     def __init__(self, target, sample, var=1, damping=1e-5):
         """
@@ -79,8 +79,8 @@ class BayesianMonteCarloFit(object):
     loc_fit = property(_get_loc_fit)
 
 
-class BayesianMonteCarloSampler(BayesianMonteCarloFit):    
-    def __init__(self, target, kernel, ndraws=None, reflect=False,
+class GaussianProcessSampler(GaussianProcessFit):    
+    def __init__(self, target, kernel, generator=None, ndraws=None, reflect=False,
                  var=1, damping=1e-5):
-        S = Sample(kernel, ndraws=ndraws, reflect=reflect)
+        S = Sample(kernel, generator=generator, ndraws=ndraws, reflect=reflect)
         self._init_from_sample(target, S, var, damping)
