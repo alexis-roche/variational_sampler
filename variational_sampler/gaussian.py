@@ -142,6 +142,8 @@ class Gaussian(object):
         Sample q(x) at specified points.
         xs must be two-dimensional with shape[0] equal to self.dim.
         """
+        if xs.ndim == 1:
+            xs = np.reshape(xs, (1, xs.size))
         ys = (xs.T - self._m).T
         u2 = np.sum(ys * np.dot(self._invV, ys), 0)
         return self._K * np.exp(-.5 * u2)
@@ -261,6 +263,8 @@ class FactorGaussian(Gaussian):
         self._detV = np.prod(self._v)
 
     def __call__(self, xs):
+        if xs.ndim == 1:
+            xs = np.reshape(xs, (1, xs.size))
         ys = (xs.T - self._m).T
         u2 = np.sum(self._invv * (ys ** 2).T, 1)
         return self._K * np.exp(-.5 * u2)

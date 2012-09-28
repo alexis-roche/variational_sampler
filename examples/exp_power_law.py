@@ -8,6 +8,7 @@ from variational_sampler.gaussian_process import GaussianProcessFit
 from variational_sampler.gaussian import Gaussian
 from variational_sampler.sampling import Sample
 from variational_sampler.toy_examples import ExponentialPowerLaw
+from variational_sampler.display import display_fit
 
 BETA = .5
 NPTS = 10
@@ -21,30 +22,6 @@ def gauss_hermite(target, h2, npts):
     m = c * np.sum(w * x * target(x)) / Z
     V = c * np.sum(w * (x ** 2) * target(x)) / Z - m ** 2
     return Gaussian(m, V, Z=Z)
-
-def display_fits(sample, target, methods, colors, acronyms, local=False):
-    xs = sample.x
-    xmax = int(np.max(np.abs(xs.squeeze()))) + 1
-    xmin = -xmax
-    x = np.linspace(-xmax, xmax, 2 * xmax / 0.01)
-    x = np.reshape(x, (1, x.size))
-    plt.figure()
-    if local:
-        fits = [m.loc_fit(x) for m in methods]
-    else:
-        fits = [m.fit(x) for m in methods]
-    for fit, color in zip(fits, colors):
-        plt.plot(x.squeeze(), fit, color, linewidth=2)
-    plt.legend(acronyms)
-    target_xs = target(xs.squeeze())
-    target_x = target(x.squeeze())
-    if local:
-        target_xs *= sample.kernel(xs)
-        target_x *= sample.kernel(x)
-    plt.stem(xs.squeeze(), target_xs, linefmt='k-', markerfmt='ko')
-    plt.plot(x.squeeze(), target_x, 'k')
-    plt.show()
-
 
 target = ExponentialPowerLaw(beta=BETA)
 v = target.V.squeeze()
@@ -68,5 +45,8 @@ print('Error for GH: %f' % gs_loc_fit.kl_div(gh_loc_fit))
 
 acronyms = ('VS', 'IS', 'BMC')
 colors = ('blue', 'orange', 'green')
-display_fits(s, target, (vf, sf, gf), colors, acronyms)
-display_fits(s, target, (vf, sf, gf), colors, acronyms, local=True)
+plt.figure()
+display_fit(s, target, (vf, sf, gf), colors, acronyms)
+plt.figure()
+display_fit(s, target, (vf, sf, gf), colors, acronyms, local=True)
+plt.show()
