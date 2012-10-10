@@ -33,7 +33,7 @@ def as_gaussian(g):
 
 class Sample(object):
 
-    def __init__(self, kernel, generator=None, ndraws=None, reflect=False):
+    def __init__(self, generator, kernel=None, ndraws=None, reflect=False):
         """
         Instantiate Sample class.
 
@@ -50,17 +50,19 @@ class Sample(object):
 
         Parameters
         ----------
-        kernel: tuple
+        generator: tuple
           a tuple (ms, Vs) where ms is a vector representing the mean
-          of the sampling kernel and Vs is a matrix or vector
+          of the sampling distribution and Vs is a matrix or vector
           representing the variance (if a vector, then a diagonal
           variance is assumed)
         """
-        self.kernel = as_gaussian(kernel)
-        if generator == None:
-            self.generator = self.kernel
+        self.generator = as_gaussian(generator)
+        if kernel is None:
+            self.kernel = None
+        elif kernel == 'match':
+            self.kernel = self.generator
         else:
-            self.generator = as_gaussian(generator)
+            self.kernel = as_gaussian(kernel)
         self.reflect = reflect
         if ndraws == None:
             ndraws = self.kernel.theta_dim
@@ -79,7 +81,9 @@ class Sample(object):
         self.x = self.generator.sample(ndraws=ndraws)
         if self.reflect:
             self.x = reflect_sample(self.x)
-        if self.generator is self.kernel:
+        if self.kernel is self.generator:
             self.w = None
+        elif self.kernel is None:
+            self.w = 1. / self.generator(self.x)
         else:
             self.w = self.kernel(self.x) / self.generator(self.x)

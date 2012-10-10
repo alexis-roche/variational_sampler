@@ -8,7 +8,7 @@ from variational_sampler.gaussian_process import GaussianProcessFit
 from variational_sampler.gaussian import Gaussian
 from variational_sampler.sampling import Sample
 from variational_sampler.toy_examples import ExponentialPowerLaw
-from variational_sampler.display import display_fit
+from display import display_fit
 
 BETA = .5
 NPTS = 10
@@ -27,7 +27,7 @@ target = ExponentialPowerLaw(beta=BETA)
 v = target.V.squeeze()
 h2 = 10 * v
 
-s = Sample((0, h2), ndraws=NPTS)
+s = Sample((0, h2), kernel='match', ndraws=NPTS)
 vf = VariationalFit(target, s, maxiter=10)
 sf = StraightFit(target, s)
 gf = GaussianProcessFit(target, s, var=v)

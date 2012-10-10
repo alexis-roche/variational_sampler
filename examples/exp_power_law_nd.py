@@ -14,7 +14,7 @@ NPTS = DIM ** 2
 target = ExponentialPowerLaw(beta=BETA, dim=DIM)
 h2 = np.diagonal(target.V)
 
-s = Sample((np.zeros(DIM), h2), ndraws=NPTS)
+s = Sample((np.zeros(DIM), h2), kernel='match', ndraws=NPTS)
 vf = VariationalFit(target, s)
 sf = StraightFit(target, s)
 gf = GaussianProcessFit(target, s, var=h2)

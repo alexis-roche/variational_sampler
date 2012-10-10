@@ -80,7 +80,7 @@ class GaussianProcessFit(object):
 
 
 class GaussianProcessSampler(GaussianProcessFit):    
-    def __init__(self, target, kernel, generator=None, ndraws=None, reflect=False,
+    def __init__(self, target, generator, kernel=None, ndraws=None, reflect=False,
                  var=1, damping=1e-5):
-        S = Sample(kernel, generator=generator, ndraws=ndraws, reflect=reflect)
+        S = Sample(generator, kernel=kernel, ndraws=ndraws, reflect=reflect)
         self._init_from_sample(target, S, var, damping)

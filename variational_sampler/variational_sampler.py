@@ -164,7 +164,10 @@ class VariationalFit(object):
         return self.family.from_theta(theta=self.theta)
 
     def _get_loc_fit(self):
-        return self.family.from_theta(theta=self.theta
+        if self.sample.kernel is None:
+            return self.family.from_theta(theta=self.theta)
+        else:
+            return self.family.from_theta(theta=self.theta
                                       + self.sample.kernel.theta)
 
     def _get_var_moment(self):
@@ -195,9 +198,9 @@ class VariationalFit(object):
 
 
 class VariationalSampler(VariationalFit):
-    def __init__(self, target, kernel, generator=None, ndraws=None, reflect=False,
+    def __init__(self, target, generator, kernel=None, ndraws=None, reflect=False,
                  family='gaussian', tol=1e-5, maxiter=None, minimizer='newton'):
-        S = Sample(kernel, generator=generator, ndraws=ndraws, reflect=reflect)
+        S = Sample(generator, kernel=kernel, ndraws=ndraws, reflect=reflect)
         self._init_from_sample(target, S, family, tol, maxiter, minimizer)
 
 
@@ -240,7 +243,10 @@ class StraightFit(object):
             - np.dot(moment, moment.T)
 
     def _get_theta(self):
-        return self._loc_fit.theta - self.sample.kernel.theta
+        if self.sample.kernel is None:
+            return self._loc_fit.theta
+        else:
+            return self._loc_fit.theta - self.sample.kernel.theta
 
     def _get_fit(self):
         return self.family.from_theta(theta=self.theta)
@@ -274,8 +280,8 @@ class StraightFit(object):
 
 
 class ImportanceSampler(StraightFit):  
-    def __init__(self, target, kernel, generator=None, ndraws=None, reflect=False,
+    def __init__(self, target, generator, kernel=None, ndraws=None, reflect=False,
                  family='gaussian'):
-        S = Sample(kernel, generator=generator, ndraws=ndraws, reflect=reflect)
+        S = Sample(generator, kernel=kernel, ndraws=ndraws, reflect=reflect)
         self._init_from_sample(target, S, family)
 
