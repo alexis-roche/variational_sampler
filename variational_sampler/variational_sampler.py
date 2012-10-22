@@ -172,7 +172,7 @@ class VariationalFit(object):
             return self.family.from_theta(self.theta + self.context.theta)
         else:
             try:
-                return fit * self.context
+                return self._get_fit() * self.context
             except:
                 warn('cannnot multiply fit with context')
                 return None
@@ -211,7 +211,7 @@ class VariationalSampler(VariationalFit):
         self._init_from_sample(target, S, family, tol, maxiter, minimizer)
 
 
-class StraightFit(object):
+class ImportanceFit(object):
 
     def __init__(self, target, sample, family='gaussian'):
         """
@@ -300,7 +300,7 @@ class StraightFit(object):
     kl_error = property(_get_kl_error)
 
 
-class ImportanceSampler(StraightFit):  
+class ImportanceSampler(ImportanceFit):  
     def __init__(self, target, kernel, context=None, ndraws=None, reflect=False,
                  family='gaussian'):
         S = Sample(kernel, context=context, ndraws=ndraws, reflect=reflect)

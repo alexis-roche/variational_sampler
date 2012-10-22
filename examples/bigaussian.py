@@ -1,14 +1,14 @@
 import numpy as np
 import pylab as plt
 from variational_sampler import VariationalSampler
-from display import display_fit
+from _display import display_fit
 
 def target(x):
     return np.exp(-.5 * (x + 2) ** 2) + np.exp(-.5 * (x - 2) ** 2)
 
-v1 = VariationalSampler(target, (-4, .1), kernel='match', ndraws=100)
-v2 = VariationalSampler(target, (4, .1), kernel='match', ndraws=100)
-v3 = VariationalSampler(target, (1, .1), kernel='match', ndraws=100)
+v1 = VariationalSampler(target, (-4, .1), context='kernel', ndraws=100)
+v2 = VariationalSampler(target, (4, .1), context='kernel', ndraws=100)
+v3 = VariationalSampler(target, (1, .1), context='kernel', ndraws=100)
 
 plt.figure()
 x = np.linspace(-6, 6, num=100)

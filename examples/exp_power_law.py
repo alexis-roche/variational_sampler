@@ -3,12 +3,12 @@ import pylab as plt
 from scipy.special.orthogonal import h_roots
 
 from variational_sampler.variational_sampler import (VariationalFit,
-                                                     StraightFit)
+                                                     ImportanceFit)
 from variational_sampler.gaussian_process import GaussianProcessFit
 from variational_sampler.gaussian import Gaussian
 from variational_sampler.sampling import Sample
-from variational_sampler.toy_examples import ExponentialPowerLaw
-from display import display_fit
+from _toy_dist import ExponentialPowerLaw
+from _display import display_fit
 
 BETA = .5
 NPTS = 10
@@ -27,9 +27,9 @@ target = ExponentialPowerLaw(beta=BETA)
 v = target.V.squeeze()
 h2 = 10 * v
 
-s = Sample((0, h2), kernel='match', ndraws=NPTS)
+s = Sample((0, h2), context='kernel', ndraws=NPTS)
 vf = VariationalFit(target, s, maxiter=10)
-sf = StraightFit(target, s)
+sf = ImportanceFit(target, s)
 gf = GaussianProcessFit(target, s, var=v)
 
 gs_loc_fit = gauss_hermite(target, h2, 250)
@@ -47,6 +47,8 @@ acronyms = ('VS', 'IS', 'BMC')
 colors = ('blue', 'orange', 'green')
 plt.figure()
 display_fit(s, target, (vf, sf, gf), colors, acronyms)
+plt.title('global fits')
 plt.figure()
 display_fit(s, target, (vf, sf, gf), colors, acronyms, local=True)
+plt.title('local fits')
 plt.show()

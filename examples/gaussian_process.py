@@ -23,12 +23,12 @@ def likelihood(x):
     return np.exp(-tmp / SIGMA)
 
 v = VariationalSampler(likelihood, prior,
-                       kernel='match',
+                       context='kernel',
                        ndraws=1000000)
 
 """
 v2 = VariationalSampler(likelihood, prior,
-                       kernel='match',
+                       context='kernel',
                        family='factor_gaussian',
                        ndraws=1000)
 
