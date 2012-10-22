@@ -35,6 +35,7 @@ class GaussianProcessFit(object):
         t0 = time()
         self.target = target
         self.sample = sample
+        self.context = sample.context
         self.dim = sample.x.shape[0]
         self.npts = sample.x.shape[1]
         var = np.asarray(var)
@@ -71,7 +72,7 @@ class GaussianProcessFit(object):
 
     def _get_loc_fit(self):
         x = self.sample.x
-        gaussians = [self.sample.kernel * FactorGaussian(xi, self._v, K=1) for xi in x.T]
+        gaussians = [self.sample.context * FactorGaussian(xi, self._v, K=1) for xi in x.T]
         return GaussianMixture(self._theta, gaussians)
 
     theta = property(_get_theta)
@@ -80,7 +81,7 @@ class GaussianProcessFit(object):
 
 
 class GaussianProcessSampler(GaussianProcessFit):    
-    def __init__(self, target, generator, kernel=None, ndraws=None, reflect=False,
+    def __init__(self, target, kernel, context=None, ndraws=None, reflect=False,
                  var=1, damping=1e-5):
-        S = Sample(generator, kernel=kernel, ndraws=ndraws, reflect=reflect)
+        S = Sample(kernel, context=context, ndraws=ndraws, reflect=reflect)
         self._init_from_sample(target, S, var, damping)

@@ -92,6 +92,15 @@ class Gaussian(object):
     def _get_theta_dim(self):
         return self._theta_dim
 
+    def _get_K(self):
+        return self._K
+
+    def _get_Z(self):
+        """
+        Compute the normalizing constant
+        """
+        return K_to_Z(self._K, self._dim, self._detV)
+
     def _get_m(self):
         return self._m
 
@@ -103,9 +112,6 @@ class Gaussian(object):
 
     def _get_sqrtV(self):
         return self._sqrtV
-
-    def _get_K(self):
-        return self._K
 
     def _get_theta(self):
         theta2 = _invV_to_theta(self._invV)
@@ -130,13 +136,6 @@ class Gaussian(object):
         self._m = np.dot(self._V, theta[self._dim2:-1])
         self._K = np.exp(theta[-1] + .5 * hdot(self._m, invV))
 
-    def _get_Z(self):
-        """
-        Compute \int q(x) dx over R^n where log q(x) is the quadratic
-        fit.  Returns np.inf if the variance is not positive definite.
-        """
-        return K_to_Z(self._K, self._dim, self._detV)
-
     def __call__(self, xs):
         """
         Sample q(x) at specified points.
@@ -149,8 +148,21 @@ class Gaussian(object):
         return self._K * np.exp(-.5 * u2)
 
     def __mul__(self, other):
-        return self.__class__(theta=self.theta + other.theta)
+        if isinstance(other, self.__class__):
+            return self.__class__(theta=self.theta + other.theta)
+        elif hasattr(other, 'embed'):
+            return self.__class__(theta=self.theta + other.embed().theta)
+        else:
+            raise ValueError('wrong multiplication argument')
 
+    def __div__(self, other):
+        if isinstance(other, self.__class__):
+            return self.__class__(theta=self.theta - other.theta)
+        elif hasattr(other, 'embed'):
+            return self.__class__(theta=self.theta - other.embed().theta)
+        else:
+            raise ValueError('wrong division argument')
+        
     def __pow__(self, power):
         return self.__class__(theta=power * self.theta)
 
@@ -188,16 +200,22 @@ class Gaussian(object):
     dim = property(_get_dim)
     theta_dim = property(_get_theta_dim)
     K = property(_get_K)
+    Z = property(_get_Z)
     m = property(_get_m)
     V = property(_get_V)
-    Z = property(_get_Z)
     invV = property(_get_invV)
     sqrtV = property(_get_sqrtV)
     theta = property(_get_theta, _set_theta)
 
 
 
-class FactorGaussian(Gaussian):
+class FactorGaussian(object):
+
+    def __init__(self, m=None, V=None, K=None, Z=None, theta=None):
+        if not theta == None:
+            self._set_theta(theta)
+        else:
+            self._set_moments(m, V, K, Z)
 
     def _set_dimensions(self, dim):
         self._dim = dim
@@ -225,6 +243,21 @@ class FactorGaussian(Gaussian):
                 Z = 1.0
             self._K = Z_to_K(Z, self._dim, self._detV)
         
+    def _get_dim(self):
+        return self._dim
+
+    def _get_theta_dim(self):
+        return self._theta_dim
+
+    def _get_K(self):
+        return self._K
+
+    def _get_Z(self):
+        return K_to_Z(self._K, self._dim, self._detV)
+
+    def _get_m(self):
+        return self._m
+
     def _get_V(self):
         return np.diag(self._v)
 
@@ -279,6 +312,34 @@ class FactorGaussian(Gaussian):
         """
         return Gaussian(self.m, self.V, K=self.K)
 
+    def __mul__(self, other):
+        if isinstance(other, self.__class__):
+            return self.__class__(theta=self.theta + other.theta)
+        elif isinstance(other, Gaussian):
+            return Gaussian(theta=self.embed().theta + other.theta)
+        else:
+            raise ValueError('wrong multiplication argument')
+
+    def __div__(self, other):
+        if isinstance(other, self.__class__):
+            return self.__class__(theta=self.theta - other.theta)
+        elif instance(other, Gaussian):
+            return Gaussian(theta=self.embed().theta - other.theta)
+        else:
+            raise ValueError('wrong division argument')
+
+    def __pow__(self, power):
+        return self.__class__(theta=power * self.theta)
+
+    def kl_div(self, other):
+        return self.embed().kl_div(other)
+
+
+    dim = property(_get_dim)
+    theta_dim = property(_get_theta_dim)
+    K = property(_get_K)
+    Z = property(_get_Z)
+    m = property(_get_m)
     V = property(_get_V)
     v = property(_get_v)
     invV = property(_get_invV)
@@ -312,6 +373,9 @@ class GaussianFamily(object):
     def from_theta(self, theta):
         return Gaussian(theta=theta)
 
+    def check(self, obj):
+        return isinstance(obj, Gaussian)
+
 
 class FactorGaussianFamily(object):
 
@@ -332,3 +396,6 @@ class FactorGaussianFamily(object):
         
     def from_theta(self, theta):
         return FactorGaussian(theta=theta)
+
+    def check(self, obj):
+        return isinstance(obj, FactorGaussian)

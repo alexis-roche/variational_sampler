@@ -30,19 +30,19 @@ def test1d_vs_basic():
 
 
 def test2d_vs_basic():
-    _test_basic(VariationalSampler(target, (np.zeros(2), np.eye(2)), kernel='match', ndraws=50))
+    _test_basic(VariationalSampler(target, (np.zeros(2), np.eye(2)), context='kernel', ndraws=50))
 
 
 def test1d_cs_basic():
-    _test_basic(ImportanceSampler(target1d, (0, 1), kernel='match', ndraws=10))
+    _test_basic(ImportanceSampler(target1d, (0, 1), context='kernel', ndraws=10))
 
 
 def test2d_cs_basic():
-    _test_basic(ImportanceSampler(target, (np.zeros(2), np.eye(2)), kernel='match', ndraws=50))
+    _test_basic(ImportanceSampler(target, (np.zeros(2), np.eye(2)), context='kernel', ndraws=50))
 
 
 def test_loss():
-    vs = VariationalSampler(target1d, (0, 1), kernel='match', ndraws=10)
+    vs = VariationalSampler(target1d, (0, 1), context='kernel', ndraws=10)
     vs._cache['q'][:] = 0
     vs._cache['log_q'][:] = -np.inf
     vs._cache['theta'] = None
@@ -101,44 +101,44 @@ def test_vs_exactness_factor_gauss_5d():
 
 def test1d_vs_constant_kernel():
     _test_basic(VariationalSampler(target1d, (1, 2), 
-                                   kernel=None,
+                                   context=None,
                                    ndraws=10))
 
 def test2d_vs_constant_kernel():
     _test_basic(VariationalSampler(target, (np.ones(2), 2 * np.eye(2)),
-                                   kernel=None,
+                                   context=None,
                                    ndraws=50))
 
 
 def test1d_cs_constant_kernel():
     _test_basic(ImportanceSampler(target1d, (1, 2),
-                                  kernel=None,
+                                  context=None,
                                   ndraws=10))
 
 
 def test2d_cs_constant_kernel():
     _test_basic(ImportanceSampler(target, (np.ones(2), 2 * np.eye(2)),
-                                  kernel=None,
+                                  context=None,
                                   ndraws=50))
 
 def test1d_vs_custom_kernel():
     _test_basic(VariationalSampler(target1d, (1, 2), 
-                                   kernel=(0, 1),
+                                   context=(0, 1),
                                    ndraws=10))
 
 def test2d_vs_custom_kernel():
     _test_basic(VariationalSampler(target, (np.ones(2), 2 * np.eye(2)),
-                                   kernel=(np.zeros(2), np.eye(2)),
+                                   context=(np.zeros(2), np.eye(2)),
                                    ndraws=50))
 
 
 def test1d_cs_custom_kernel():
     _test_basic(ImportanceSampler(target1d, (1, 2),
-                                  kernel=(0, 1),
+                                  context=(0, 1),
                                   ndraws=10))
 
 
 def test2d_cs_custom_kernel():
     _test_basic(ImportanceSampler(target, (np.ones(2), 2 * np.eye(2)),
-                                  kernel=(np.zeros(2), np.eye(2)),
+                                  context=(np.zeros(2), np.eye(2)),
                                   ndraws=50))

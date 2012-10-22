@@ -33,11 +33,11 @@ def as_gaussian(g):
 
 class Sample(object):
 
-    def __init__(self, generator, kernel=None, ndraws=None, reflect=False):
+    def __init__(self, kernel, context=None, ndraws=None, reflect=False):
         """
         Instantiate Sample class.
 
-        Given a kernel w(x), a sample (x1, x2, ..., xn) is generated
+        Given a context w(x), a sample (x1, x2, ..., xn) is generated
         such that, for any function f(x), the integral
 
         int w(x)f(x)dx 
@@ -50,19 +50,19 @@ class Sample(object):
 
         Parameters
         ----------
-        generator: tuple
+        kernel: tuple
           a tuple (ms, Vs) where ms is a vector representing the mean
           of the sampling distribution and Vs is a matrix or vector
           representing the variance (if a vector, then a diagonal
           variance is assumed)
         """
-        self.generator = as_gaussian(generator)
-        if kernel is None:
-            self.kernel = None
-        elif kernel == 'match':
-            self.kernel = self.generator
+        self.kernel = as_gaussian(kernel)
+        if context is None:
+            self.context = None
+        elif context == 'kernel':
+            self.context = self.kernel
         else:
-            self.kernel = as_gaussian(kernel)
+            self.context = as_gaussian(context)
         self.reflect = reflect
         if ndraws == None:
             ndraws = self.kernel.theta_dim
@@ -75,15 +75,15 @@ class Sample(object):
 
     def _sample(self, ndraws):
         """
-        Sample independent points from the specified kernel and
+        Sample independent points from the specified context and
         compute associated distribution values.
         """
-        self.x = self.generator.sample(ndraws=ndraws)
+        self.x = self.kernel.sample(ndraws=ndraws)
         if self.reflect:
             self.x = reflect_sample(self.x)
-        if self.kernel is self.generator:
+        if self.context is self.kernel:
             self.w = None
-        elif self.kernel is None:
-            self.w = 1. / self.generator(self.x)
+        elif self.context is None:
+            self.w = 1. / self.kernel(self.x)
         else:
-            self.w = self.kernel(self.x) / self.generator(self.x)
+            self.w = self.context(self.x) / self.kernel(self.x)

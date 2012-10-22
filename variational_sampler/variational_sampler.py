@@ -1,4 +1,5 @@
 from time import time
+from warnings import warn
 import numpy as np
 
 from .numlib import (inv_sym_matrix,
@@ -50,6 +51,7 @@ class VariationalFit(object):
         t0 = time()
         self.target = target
         self.sample = sample
+        self.context = sample.context
         self.dim = sample.x.shape[0]
         self.npts = sample.x.shape[1]
 
@@ -164,17 +166,16 @@ class VariationalFit(object):
         return self.family.from_theta(self.theta)
 
     def _get_loc_fit(self):
-        if self.sample.kernel is None:
-            return self.family.from_theta(self.theta)
+        if self.context is None:
+            return self._get_fit()
+        elif self.family.check(self.context):
+            return self.family.from_theta(self.theta + self.context.theta)
         else:
-            if self.theta.size == self.sample.kernel.theta.size:
-                return self.family.from_theta(self.theta + self.sample.kernel.theta)
-            elif self.theta.size < self.sample.kernel.theta.size:
-                fit = self.family.from_theta(self.theta).embed()
-                return fit.__class__(theta=fit.theta + self.sample.kernel.theta)
-            else:
-                kernel = self.sample.kernel.embed()
-                return kernel.__class__(self.theta + kernel.theta)
+            try:
+                return fit * self.context
+            except:
+                warn('cannnot multiply fit with context')
+                return None
 
     def _get_var_moment(self):
         return self._var_moment(self.theta)
@@ -204,9 +205,9 @@ class VariationalFit(object):
 
 
 class VariationalSampler(VariationalFit):
-    def __init__(self, target, generator, kernel=None, ndraws=None, reflect=False,
+    def __init__(self, target, kernel, context=None, ndraws=None, reflect=False,
                  family='gaussian', tol=1e-5, maxiter=None, minimizer='newton'):
-        S = Sample(generator, kernel=kernel, ndraws=ndraws, reflect=reflect)
+        S = Sample(kernel, context=context, ndraws=ndraws, reflect=reflect)
         self._init_from_sample(target, S, family, tol, maxiter, minimizer)
 
 
@@ -222,6 +223,7 @@ class StraightFit(object):
         t0 = time()
         self.target = target
         self.sample = sample
+        self.context = sample.context
         self.dim = sample.x.shape[0]
         self.npts = sample.x.shape[1]
         
@@ -242,19 +244,32 @@ class StraightFit(object):
             p *= self.sample.w
         moment = np.dot(F, p) / self.npts
         self._loc_fit = self.family.from_moment(moment)
+        self._set_theta()
         # Compute variance on moment estimate
         if moment.ndim == 1:
             moment = np.reshape(moment, (moment.size, 1))
         self._var_moment = np.dot(F * (p ** 2), F.T) / self.npts\
             - np.dot(moment, moment.T)
 
-    def _get_theta(self):
-        if self.sample.kernel is None:
-            return self._loc_fit.theta
+    def _set_theta(self):
+        if self.context is None:
+            self._theta = self._loc_fit.theta
+        elif self.family.check(self.context):
+            self._theta = self._loc_fit.theta - self.context.theta
         else:
-            return self._loc_fit.theta - self.sample.kernel.theta
+            try:
+                fit = self._loc_fit / self.context
+                self._theta = fit.theta
+            except:
+                self._theta = None
+
+    def _get_theta(self):
+        return self._theta
 
     def _get_fit(self):
+        if self._theta is None:
+            warn('cannot divide fit with context')
+            return None
         return self.family.from_theta(self.theta)
 
     def _get_loc_fit(self):
@@ -286,8 +301,8 @@ class StraightFit(object):
 
 
 class ImportanceSampler(StraightFit):  
-    def __init__(self, target, generator, kernel=None, ndraws=None, reflect=False,
+    def __init__(self, target, kernel, context=None, ndraws=None, reflect=False,
                  family='gaussian'):
-        S = Sample(generator, kernel=kernel, ndraws=ndraws, reflect=reflect)
+        S = Sample(kernel, context=context, ndraws=ndraws, reflect=reflect)
         self._init_from_sample(target, S, family)
 

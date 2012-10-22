@@ -87,6 +87,14 @@ def test_multiply_hybrid():
     assert_array_equal(g.V, .5 * np.eye(2))
 
 
+def test_multiply_hybrid_reverse():
+    g1 = FactorGaussian([0, 0], np.ones(2))
+    g2 = Gaussian([0, 0], np.eye(2))
+    g = g1 * g2
+    assert_array_equal(g.m, [0, 0])
+    assert_array_equal(g.V, .5 * np.eye(2))
+
+
 def test_power():
     for c, v in zip((Gaussian, FactorGaussian),
                     (np.eye(2), np.ones(2))):
