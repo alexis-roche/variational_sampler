@@ -161,14 +161,20 @@ class VariationalFit(object):
         return self._theta
 
     def _get_fit(self):
-        return self.family.from_theta(theta=self.theta)
+        return self.family.from_theta(self.theta)
 
     def _get_loc_fit(self):
         if self.sample.kernel is None:
-            return self.family.from_theta(theta=self.theta)
+            return self.family.from_theta(self.theta)
         else:
-            return self.family.from_theta(theta=self.theta
-                                      + self.sample.kernel.theta)
+            if self.theta.size == self.sample.kernel.theta.size:
+                return self.family.from_theta(self.theta + self.sample.kernel.theta)
+            elif self.theta.size < self.sample.kernel.theta.size:
+                fit = self.family.from_theta(self.theta).embed()
+                return fit.__class__(theta=fit.theta + self.sample.kernel.theta)
+            else:
+                kernel = self.sample.kernel.embed()
+                return kernel.__class__(self.theta + kernel.theta)
 
     def _get_var_moment(self):
         return self._var_moment(self.theta)
@@ -249,7 +255,7 @@ class StraightFit(object):
             return self._loc_fit.theta - self.sample.kernel.theta
 
     def _get_fit(self):
-        return self.family.from_theta(theta=self.theta)
+        return self.family.from_theta(self.theta)
 
     def _get_loc_fit(self):
         return self._loc_fit

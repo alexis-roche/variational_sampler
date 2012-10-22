@@ -148,18 +148,11 @@ class Gaussian(object):
         u2 = np.sum(ys * np.dot(self._invV, ys), 0)
         return self._K * np.exp(-.5 * u2)
 
-    def copy(self):
-        return Gaussian(self._m, self._V, self._K)
-
     def __mul__(self, other):
-        ret = self.copy()
-        ret._set_theta(self.theta + other.theta)
-        return ret
+        return self.__class__(theta=self.theta + other.theta)
 
     def __pow__(self, power):
-        ret = self.copy()
-        ret._set_theta(power * self.theta)
-        return ret
+        return self.__class__(theta=power * self.theta)
 
     def sample(self, ndraws=1):
         """
@@ -269,9 +262,6 @@ class FactorGaussian(Gaussian):
         u2 = np.sum(self._invv * (ys ** 2).T, 1)
         return self._K * np.exp(-.5 * u2)
 
-    def copy(self):
-        return Gaussian(self._m, self._v, self._K)
-
     def sample(self, ndraws=1):
         xs = (np.sqrt(np.abs(self._v)) * np.random.normal(size=(self._dim, ndraws)).T).T
         return (self._m + xs.T).T  # preserves shape
@@ -282,6 +272,12 @@ class FactorGaussian(Gaussian):
         s += str(self._m) + '\n'
         s += 'diag(' + str(self._v) + ')\n'
         return s
+
+    def embed(self):
+        """
+        Return equivalent instance of the parent class
+        """
+        return Gaussian(self.m, self.V, K=self.K)
 
     V = property(_get_V)
     v = property(_get_v)
