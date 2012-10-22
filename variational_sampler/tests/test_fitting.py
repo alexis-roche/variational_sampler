@@ -2,8 +2,8 @@ import numpy as np
 from nose.tools import assert_equal
 from numpy.testing import assert_almost_equal, assert_array_almost_equal
 
-from ..variational_sampler import (VariationalSampler,
-                                   ImportanceSampler)
+from ..variational_sampler import VariationalSampler
+from ..importance_sampler import ImportanceSampler
 from ..gaussian import (Gaussian, FactorGaussian)
 
 

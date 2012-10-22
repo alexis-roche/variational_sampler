@@ -15,11 +15,11 @@ for i in range(1, DIM):
 Ainv = np.linalg.inv(A)
 prior = (np.zeros(DIM), np.dot(A, A.T))
 
-def likelihood(x):
+def likelihood(x, power=1.):
     """
     x is an array with shape (d, N)
     """
-    tmp = np.abs((x.T - y).T).sum(0)
+    tmp = (np.abs((x.T - y).T) ** power).sum(0)
     return np.exp(-tmp / SIGMA)
 
 v = VariationalSampler(likelihood, prior,

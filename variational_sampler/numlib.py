@@ -220,3 +220,10 @@ class ScipyBFGS(object):
         print('Scipy BFGS quasi-Newton implementation')
     
     
+min_methods = {'steepest': SteepestDescent,
+               'conjugate': ConjugateDescent,
+               'newton': NewtonDescent,
+               'quasi_newton': QuasiNewtonDescent,
+               'cg': ScipyCG,
+               'ncg': ScipyNCG,
+               'bfgs': ScipyBFGS}
