@@ -18,9 +18,7 @@ h2 = np.diagonal(target.V)
 s = Sample((np.zeros(DIM), h2), ndraws=NPTS)
 vs = VariationalFit(target, s)
 v0 = ImportanceFit(target, s)
-"""v1 = GaussianProcessFit(target, s, var=h2)
-"""
-v1 = v0
+v1 = GaussianProcessFit(target, s, var=h2)
 gopt = Gaussian(target.m, target.V, Z=target.Z)
 
 print('Error for VS: %f (expected: %f)'\
