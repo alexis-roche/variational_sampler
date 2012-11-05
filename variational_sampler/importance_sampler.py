@@ -47,10 +47,8 @@ class ImportanceFit(object):
         self._loc_fit = self.family.from_moment(moment)
         self._set_theta()
         # Compute variance on moment estimate
-        if moment.ndim == 1:
-            moment = np.reshape(moment, (moment.size, 1))
-        self._var_moment = np.dot(F * (p ** 2), F.T) / self.npts\
-            - np.dot(moment, moment.T)
+        self._var_moment = np.dot(F * (p ** 2), F.T) / self.npts \
+            - np.dot(moment.reshape(moment.size, 1), moment.reshape(1, moment.size))
 
     def _set_theta(self):
         if self.context is None:
@@ -82,6 +80,8 @@ class ImportanceFit(object):
     def _get_fisher_info(self):
         F = self._cache['F']
         q = np.nan_to_num(np.exp(np.dot(F.T, np.nan_to_num(self.theta))))
+        if not self.sample.w is None:
+            q *= self.sample.w
         return np.dot(F * q, F.T) / self.npts
 
     def _get_var_theta(self):

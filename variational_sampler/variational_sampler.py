@@ -16,7 +16,8 @@ families = {'gaussian': GaussianFamily,
 class VariationalFit(object):
     
     def __init__(self, target, sample, family='gaussian',
-                 tol=1e-5, maxiter=None, minimizer='newton'):
+                 theta=None, tol=1e-5, maxiter=None,
+                 minimizer='newton'):
         """
         Variational sampler object.
 
@@ -31,9 +32,9 @@ class VariationalFit(object):
         minimizer : string
           One of 'newton', 'quasi_newton', steepest', 'conjugate'
         """
-        self._init_from_sample(target, sample, family, tol, maxiter, minimizer)
+        self._init_from_sample(target, sample, family, theta, tol, maxiter, minimizer)
 
-    def _init_from_sample(self, target, sample, family, tol, maxiter, minimizer):
+    def _init_from_sample(self, target, sample, family, theta, tol, maxiter, minimizer):
         """
         Init object given a sample instance.
         """
@@ -58,6 +59,13 @@ class VariationalFit(object):
             'log_p': np.nan_to_num(np.log(p)),
             'q': np.zeros(p.size),
             'log_q': np.zeros(p.size)}
+
+        # Initial guess
+        if theta is None:
+            self._theta = np.zeros(self._cache['F'].shape[0])
+            self._theta[-1] = np.nan_to_num(np.log(np.sum(p) / np.sum(sample.w)))
+        else:
+            self._theta = np.asarray(theta)
 
         # Perform fitting
         self.minimizer = minimizer
@@ -125,14 +133,11 @@ class VariationalFit(object):
     def _fisher_info(self, theta):
         return self._hessian(self.theta) / self.npts
 
-    def _initial_guess(self):
-        return np.zeros(self._cache['F'].shape[0])
-
     def _do_fitting(self):
         """
         Perform Gaussian approximation.
         """
-        theta = self._initial_guess()
+        theta = self._theta
         meth = self.minimizer
         if meth not in min_methods.keys():
             raise ValueError('unknown minimizer')
@@ -176,7 +181,7 @@ class VariationalFit(object):
         return self._fisher_info(self.theta)
 
     def _get_var_theta(self):
-        inv_fisher_info = inv_sym_matrix(self._fisher_info(self.theta))
+        inv_fisher_info = inv_sym_matrix(self.fisher_info)
         return np.dot(np.dot(inv_fisher_info, self._var_moment(self.theta)),
                       inv_fisher_info)
 
@@ -198,6 +203,6 @@ class VariationalFit(object):
 
 class VariationalSampler(VariationalFit):
     def __init__(self, target, kernel, context=None, ndraws=None, reflect=False,
-                 family='gaussian', tol=1e-5, maxiter=None, minimizer='newton'):
+                 family='gaussian', theta=None, tol=1e-5, maxiter=None, minimizer='newton'):
         S = Sample(kernel, context=context, ndraws=ndraws, reflect=reflect)
-        self._init_from_sample(target, S, family, tol, maxiter, minimizer)
+        self._init_from_sample(target, S, family, theta, tol, maxiter, minimizer)

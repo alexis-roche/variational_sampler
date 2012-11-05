@@ -28,27 +28,27 @@ v = target.V.squeeze()
 h2 = 10 * v
 
 s = Sample((0, h2), context='kernel', ndraws=NPTS)
-vf = VariationalFit(target, s, maxiter=10)
-sf = ImportanceFit(target, s)
-gf = GaussianProcessFit(target, s, var=v)
+vs = VariationalFit(target, s, maxiter=10)
+v0 = ImportanceFit(target, s)
+v1 = GaussianProcessFit(target, s, var=v)
 
 gs_loc_fit = gauss_hermite(target, h2, 250)
 gh_loc_fit = gauss_hermite(target, h2, NPTS)
 
 print('Error for VS: %f (expected: %f)'\
-          % (gs_loc_fit.kl_div(vf.loc_fit), vf.kl_error))
+          % (gs_loc_fit.kl_div(vs.loc_fit), vs.kl_error))
 print('Error for IS: %f (expected: %f)'\
-           % (gs_loc_fit.kl_div(sf.loc_fit), sf.kl_error))
-print('Error for BMC: %f'% gs_loc_fit.kl_div(gf.loc_fit))
+           % (gs_loc_fit.kl_div(v0.loc_fit), v0.kl_error))
+print('Error for BMC: %f'% gs_loc_fit.kl_div(v1.loc_fit))
 print('Error for GH: %f' % gs_loc_fit.kl_div(gh_loc_fit))
 
 
 acronyms = ('VS', 'IS', 'BMC')
 colors = ('blue', 'orange', 'green')
 plt.figure()
-display_fit(s, target, (vf, sf, gf), colors, acronyms)
+display_fit(s, target, (vs, v0, v1), colors, acronyms)
 plt.title('global fits')
 plt.figure()
-display_fit(s, target, (vf, sf, gf), colors, acronyms, local=True)
+display_fit(s, target, (vs, v0, v1), colors, acronyms, local=True)
 plt.title('local fits')
 plt.show()

@@ -84,6 +84,6 @@ class Sample(object):
         if self.context is self.kernel:
             self.w = None
         elif self.context is None:
-            self.w = 1. / self.kernel(self.x)
+            self.w = 1 / self.kernel(self.x)
         else:
             self.w = self.context(self.x) / self.kernel(self.x)
