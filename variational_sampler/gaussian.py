@@ -364,9 +364,9 @@ class GaussianFamily(object):
         Z = moment[-1]
         m = moment[-1 - self._dim:-1] / Z
         V = np.zeros((self._dim, self._dim))
-        idx = np.triu_indices(self._dim) 
+        idx = np.triu_indices(self._dim)
         V[idx] = moment[0:-1 - self._dim] / Z
-        V[np.tril_indices(self._dim)] = V[idx]
+        V.T[np.triu_indices(self._dim)] = V[idx]
         V -= np.diag(m ** 2)
         return Gaussian(m, V, Z=Z)
         

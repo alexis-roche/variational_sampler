@@ -125,11 +125,14 @@ class VariationalFit(object):
     def _fisher_info(self, theta):
         return self._hessian(self.theta) / self.npts
 
+    def _initial_guess(self):
+        return np.zeros(self._cache['F'].shape[0])
+
     def _do_fitting(self):
         """
         Perform Gaussian approximation.
         """
-        theta = np.zeros(self._cache['F'].shape[0])
+        theta = self._initial_guess()
         meth = self.minimizer
         if meth not in min_methods.keys():
             raise ValueError('unknown minimizer')
