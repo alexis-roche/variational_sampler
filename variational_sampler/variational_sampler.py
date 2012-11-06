@@ -50,20 +50,25 @@ class VariationalFit(object):
             raise ValueError('unknown family')
         self.family = families[family](self.dim)
         p = self.target(sample.x).squeeze()
+        log_p = np.nan_to_num(np.log(p))
         if not sample.w is None:
             p *= sample.w
         self._cache = {
             'theta': None,
             'F': self.family.design_matrix(sample.x),
-            'p': p,
-            'log_p': np.nan_to_num(np.log(p)),
-            'q': np.zeros(p.size),
+            'pw': p,
+            'log_p': log_p,
+            'qw': np.zeros(p.size),
             'log_q': np.zeros(p.size)}
 
         # Initial guess
         if theta is None:
             self._theta = np.zeros(self._cache['F'].shape[0])
-            self._theta[-1] = np.nan_to_num(np.log(np.sum(p) / np.sum(sample.w)))
+            if sample.w is None:
+                W = self.npts
+            else:
+                W = np.sum(sample.w)
+            self._theta[-1] = np.nan_to_num(np.log(np.sum(p) / W))
         else:
             self._theta = np.asarray(theta)
 
@@ -81,9 +86,9 @@ class VariationalFit(object):
         c = self._cache
         if not theta is c['theta']:
             c['log_q'][:] = np.dot(c['F'].T, np.nan_to_num(theta))
-            c['q'][:] = np.nan_to_num(np.exp(c['log_q']))
+            c['qw'][:] = np.nan_to_num(np.exp(c['log_q']))
             if not self.sample.w is None:
-                c['q'] *= self.sample.w
+                c['qw'] *= self.sample.w
             c['theta'] = theta
 
     def _loss(self, theta):
@@ -98,8 +103,8 @@ class VariationalFit(object):
         """
         self._udpate_fit(theta)
         c = self._cache
-        return np.sum(c['p'] * (c['log_p'] - c['log_q'])
-                      + c['q'] - c['p'])
+        return np.sum(c['pw'] * (c['log_p'] - c['log_q'])
+                      + c['qw'] - c['pw'])
 
     def _gradient(self, theta):
         """
@@ -107,7 +112,7 @@ class VariationalFit(object):
         """
         self._udpate_fit(theta)
         c = self._cache
-        return np.dot(c['F'], c['q'] - c['p'])
+        return np.dot(c['F'], c['qw'] - c['pw'])
 
     def _hessian(self, theta):
         """
@@ -115,7 +120,7 @@ class VariationalFit(object):
         """
         self._udpate_fit(theta)
         c = self._cache
-        return np.dot(c['F'] * c['q'], c['F'].T)
+        return np.dot(c['F'] * c['qw'], c['F'].T)
 
     def _pseudo_hessian(self):
         """
@@ -123,11 +128,11 @@ class VariationalFit(object):
         fitted distribution with the target distribution.
         """
         c = self._cache
-        return np.dot(c['F'] * c['p'], c['F'].T)
+        return np.dot(c['F'] * c['pw'], c['F'].T)
 
     def _var_moment(self, theta):
         c = self._cache
-        return np.dot(c['F'] * ((c['p'] - c['q']) ** 2), c['F'].T)\
+        return np.dot(c['F'] * ((c['pw'] - c['qw']) ** 2), c['F'].T)\
             / self.npts
 
     def _fisher_info(self, theta):

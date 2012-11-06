@@ -8,11 +8,12 @@ from variational_sampler.gaussian import Gaussian
 from _toy_dist import ExponentialPowerLaw
 
 
-BETA = 3
-DIM = 5
+BETA = 1.5
+DIM = 20
 NPTS = 10 * DIM ** 2
 
 target = ExponentialPowerLaw(beta=BETA, dim=DIM)
+
 h2 = np.diagonal(target.V)
 
 s = Sample((np.zeros(DIM), h2), ndraws=NPTS)

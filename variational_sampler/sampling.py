@@ -27,7 +27,7 @@ def as_gaussian(g):
         else:
             raise ValueError('input variance not understood')
     except:
-        raiseValueError('input not understood')
+        raise ValueError('input not understood')
     return G
 
 
