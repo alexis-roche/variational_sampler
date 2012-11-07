@@ -52,12 +52,10 @@ class Gaussian(object):
 
     def _set_dimensions(self, dim):
         """
-        Set dimensional parameters: np (number of parameters), dim2
-        (number of second-order parameters)
+        Set dimensional parameters
         """
         self._dim = dim
-        self._dim2 = (dim * (dim + 1)) / 2
-        self._theta_dim = self._dim2 + dim + 1
+        self._theta_dim = (dim * (dim + 1)) / 2 + dim + 1
 
     def _set_moments(self, m, V, K=None, Z=None):
         m = np.asarray(m)
@@ -117,7 +115,7 @@ class Gaussian(object):
         theta2 = _invV_to_theta(self._invV)
         theta1 = np.dot(self._invV, self._m)
         theta0 = np.log(self._K) - .5 * np.dot(self._m, theta1)
-        return np.concatenate((theta2, theta1, np.array((theta0,))))
+        return np.concatenate((np.array((theta0,)), theta1, theta2))
 
     def _set_theta(self, theta):
         """
@@ -126,15 +124,15 @@ class Gaussian(object):
         theta = np.asarray(theta)
         dim = _sample_dim(theta.size)
         self._set_dimensions(dim)
-        invV = _theta_to_invV(theta[0:self._dim2])
+        invV = _theta_to_invV(theta[(dim + 1):])
         abs_s, sign_s, P = decomp_sym_matrix(invV)
         self._invV = invV
         inv_s = sign_s / abs_s
         self._V = np.dot(np.dot(P, np.diag(inv_s)), P.T)
         self._detV = np.prod(inv_s)
         self._sqrtV = np.dot(np.dot(P, np.diag(abs_s ** - .5)), P.T)
-        self._m = np.dot(self._V, theta[self._dim2:-1])
-        self._K = np.exp(theta[-1] + .5 * hdot(self._m, invV))
+        self._m = np.dot(self._V, theta[1:(dim + 1)])
+        self._K = np.exp(theta[0] + .5 * hdot(self._m, invV))
 
     def rescale(self, c):
         self._K *= c
@@ -283,17 +281,17 @@ class FactorGaussian(object):
         theta2 = -.5 * invV
         theta1 = invV * self._m
         theta0 = np.log(self._K) - .5 * np.dot(self._m, theta1)
-        return np.concatenate((theta2, theta1, np.array((theta0,))))
+        return np.concatenate((np.array((theta0,)), theta1, theta2))
 
     def _set_theta(self, theta):
         theta = np.asarray(theta)
         dim = (theta.size - 1) / 2
         self._set_dimensions(dim)
-        invv = -2 * theta[0:self._dim]
+        invv = -2 * theta[(dim + 1):]
         self._invv = invv
         self._v = np.nan_to_num(1 / invv)
-        self._m = self._v * theta[self._dim:-1]
-        self._K = np.exp(theta[-1] + .5 * np.dot(self._m, invv * self._m))
+        self._m = self._v * theta[1:(dim + 1)]
+        self._K = np.exp(theta[0] + .5 * np.dot(self._m, invv * self._m))
         self._detV = np.prod(self._v)
 
     def rescale(self, c):
@@ -378,14 +376,14 @@ class GaussianFamily(object):
         """
         I, J = np.triu_indices(pts.shape[0])
         F = np.array([pts[i, :] * pts[j, :] for i, j in zip(I, J)])
-        return np.concatenate((F, pts, np.ones((1, pts.shape[1]))))
+        return np.concatenate((np.ones((1, pts.shape[1])), pts, F))
 
     def from_moment(self, moment):
-        Z = moment[-1]
-        m = moment[-1 - self._dim:-1] / Z
+        Z = moment[0]
+        m = moment[1: (self._dim + 1)] / Z
         V = np.zeros((self._dim, self._dim))
         idx = np.triu_indices(self._dim)
-        V[idx] = moment[0:-1 - self._dim] / Z
+        V[idx] = moment[(self._dim + 1):] / Z
         V.T[np.triu_indices(self._dim)] = V[idx]
         V -= np.diag(m ** 2)
         return Gaussian(m, V, Z=Z)
@@ -406,12 +404,12 @@ class FactorGaussianFamily(object):
         """
         pts: array with shape (dim, n)
         """
-        return np.concatenate((pts ** 2,  pts, np.ones((1, pts.shape[1]))))
+        return np.concatenate((np.ones((1, pts.shape[1])), pts,  pts ** 2))
 
     def from_moment(self, moment):
-        Z = moment[-1]
-        m = moment[-1 - self._dim:-1] / Z
-        v = moment[0:-1 - self._dim] / Z - m ** 2
+        Z = moment[0]
+        m = moment[1: (self._dim + 1)] / Z
+        v = moment[(self._dim + 1):] / Z - m ** 2
         return FactorGaussian(m, v, Z=Z)
         
     def from_theta(self, theta):

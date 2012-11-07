@@ -47,7 +47,7 @@ def test1d_input_factor2():
 
 def test1d_input_natural_params():
     for c in (Gaussian, FactorGaussian):
-        g = c(theta=[-.5, 0, 0])
+        g = c(theta=[0, 0, -.5])
         assert_equal(g.m, 0)
         assert_equal(g.V, 1)
         assert_almost_equal(g.K, 1)
@@ -65,7 +65,7 @@ def test2d_basic():
 
 def test2d_input_natural_params():
     for c, theta in zip((Gaussian, FactorGaussian),
-                        ([-.5, 0, -.5, 0, 0, 0], [-.5, -.5, 0, 0, 0])):
+                        ([0, 0, 0, -.5, 0, -.5], [0, 0, 0, -.5, -.5])):
         g = c(theta=theta)
         assert_array_equal(g.m, [0, 0])
         assert_array_equal(g.V, np.eye(2))
@@ -126,14 +126,8 @@ def test_gaussian_family():
     V = np.random.rand(5, 5)
     V = np.dot(V.T, V)
     E = V + np.dot(m.reshape((5, 1)), m.reshape((1, 5)))
-    moment = np.concatenate((E[np.triu_indices(5)], m, (1,)))
+    moment = np.concatenate(((1,), m, E[np.triu_indices(5)]))
     g = f.from_moment(moment)
-
-    print ('***********************')
-    print g.Z
-    print g.m
-    print g.V
-
     assert_almost_equal(g.Z, 1)
     assert_array_almost_equal(g.m, m)
     assert_array_almost_equal(g.V, V)
@@ -145,7 +139,7 @@ def test_factor_gaussian_family():
     m = np.random.rand(5)
     v = np.random.rand(5) ** 2
     e = v + m ** 2
-    moment = np.concatenate((e, m, (1,)))
+    moment = np.concatenate(((1,), m, e))
     g = f.from_moment(moment)
     assert_almost_equal(g.Z, 1)
     assert_array_almost_equal(g.m, m)
