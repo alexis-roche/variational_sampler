@@ -31,9 +31,18 @@ def as_gaussian(g):
     return G
 
 
+def sample_fun(f, x):
+    try:
+        y = f(x).squeeze()
+    except:
+        f = lambda x: np.array([f(xi) for xi in x.T])
+        y = f(x).squeeze()
+    return y, f
+
+
 class Sample(object):
 
-    def __init__(self, kernel, context=None, ndraws=None, reflect=False):
+    def __init__(self, target, kernel, context=None, ndraws=None, reflect=False):
         """
         Instantiate Sample class.
 
@@ -50,6 +59,9 @@ class Sample(object):
 
         Parameters
         ----------
+        target: callable
+          returns the log of the target distribution
+
         kernel: tuple
           a tuple (ms, Vs) where ms is a vector representing the mean
           of the sampling distribution and Vs is a matrix or vector
@@ -57,6 +69,7 @@ class Sample(object):
           variance is assumed)
         """
         self.kernel = as_gaussian(kernel)
+        self.target = target
         if context is None:
             self.context = None
         elif context == 'kernel':
@@ -75,15 +88,18 @@ class Sample(object):
 
     def _sample(self, ndraws):
         """
-        Sample independent points from the specified context and
+        Sample independent points from the specified kernel and
         compute associated distribution values.
         """
         self.x = self.kernel.sample(ndraws=ndraws)
         if self.reflect:
             self.x = reflect_sample(self.x)
+        self.log_p, self.target = sample_fun(self.target, self.x)
         if self.context is self.kernel:
-            self.w = None
+            self.log_w = np.zeros(self.log_p.size)
         elif self.context is None:
-            self.w = 1 / self.kernel(self.x)
+            self.log_w = -self.kernel.log(self.x)
         else:
-            self.w = self.context(self.x) / self.kernel(self.x)
+            self.log_w = self.context.log(self.x) - self.kernel.log(self.x)
+        self.pw = np.exp(self.log_p + self.log_w)
+

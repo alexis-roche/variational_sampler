@@ -27,8 +27,8 @@ def display_fit(sample, target, method, color=None, acronym=None, local=False):
             plt.plot(x.squeeze(), fit, col, linewidth=2)
     if not acronym is None:
         plt.legend(acronym)
-    target_xs = target(xs.squeeze())
-    target_x = target(x.squeeze())
+    target_xs = np.exp(target(xs.squeeze()))
+    target_x = np.exp(target(x.squeeze()))
     if local:
         target_xs *= sample.kernel(xs)
         target_x *= sample.kernel(x)

@@ -8,7 +8,7 @@ from .gaussian_mixture import GaussianMixture
 
 class GaussianProcessFit(object):
 
-    def __init__(self, target, sample, var=1, damping=1e-5):
+    def __init__(self, sample, var=1, damping=1e-5):
         """
         Bayesian quadrature using Gaussian kernels (Bayesian Monte
         Carlo method).
@@ -29,13 +29,11 @@ class GaussianProcessFit(object):
         damping : float
           Damping factor used for regularization to avoid ill-conditioning
         """
-        self._init_from_sample(target, sample, var, damping)
+        self._init_from_sample(sample, var, damping)
 
-    def _init_from_sample(self, target, sample, var, damping):
+    def _init_from_sample(self, sample, var, damping):
         t0 = time()
-        self.target = target
         self.sample = sample
-        self.context = sample.context
         self.dim = sample.x.shape[0]
         self.npts = sample.x.shape[1]
         var = np.asarray(var)
@@ -59,7 +57,7 @@ class GaussianProcessFit(object):
 
         # Solve for the spline coefficients and compute model evidence
         L, lower = cho_factor(G, lower=0)
-        p = self.target(self.sample.x).squeeze()
+        p = np.exp(self.sample.log_p)
         self._theta = cho_solve((L, 0), p)
 
     def _get_theta(self):
@@ -83,5 +81,5 @@ class GaussianProcessFit(object):
 class GaussianProcessSampler(GaussianProcessFit):    
     def __init__(self, target, kernel, context=None, ndraws=None, reflect=False,
                  var=1, damping=1e-5):
-        S = Sample(kernel, context=context, ndraws=ndraws, reflect=reflect)
-        self._init_from_sample(target, S, var, damping)
+        S = Sample(target, kernel, context=context, ndraws=ndraws, reflect=reflect)
+        self._init_from_sample(S, var, damping)

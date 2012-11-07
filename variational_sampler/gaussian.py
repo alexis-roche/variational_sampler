@@ -136,16 +136,21 @@ class Gaussian(object):
         self._m = np.dot(self._V, theta[self._dim2:-1])
         self._K = np.exp(theta[-1] + .5 * hdot(self._m, invV))
 
-    def __call__(self, xs):
-        """
-        Sample q(x) at specified points.
-        xs must be two-dimensional with shape[0] equal to self.dim.
-        """
+    def mahalanobis(self, xs):
         if xs.ndim == 1:
             xs = np.reshape(xs, (1, xs.size))
         ys = (xs.T - self._m).T
-        u2 = np.sum(ys * np.dot(self._invV, ys), 0)
-        return self._K * np.exp(-.5 * u2)
+        return np.sum(ys * np.dot(self._invV, ys), 0)
+
+    def log(self, xs):
+        return np.log(self._K) - .5 * self.mahalanobis(xs)
+
+    def __call__(self, xs, log=True):
+        """
+        Evaluate the Gaussian at specified points.
+        xs must have shape (dim, npts)
+        """
+        return self._K * np.exp(-.5 * self.mahalanobis(xs))
 
     def __mul__(self, other):
         if isinstance(other, self.__class__):
@@ -153,7 +158,7 @@ class Gaussian(object):
         elif hasattr(other, 'embed'):
             return self.__class__(theta=self.theta + other.embed().theta)
         else:
-            raise ValueError('wrong multiplication argument')
+            self._K *= other
 
     def __div__(self, other):
         if isinstance(other, self.__class__):
@@ -161,7 +166,7 @@ class Gaussian(object):
         elif hasattr(other, 'embed'):
             return self.__class__(theta=self.theta - other.embed().theta)
         else:
-            raise ValueError('wrong division argument')
+            self.K /= other
         
     def __pow__(self, power):
         return self.__class__(theta=power * self.theta)
@@ -288,12 +293,21 @@ class FactorGaussian(object):
         self._K = np.exp(theta[-1] + .5 * np.dot(self._m, invv * self._m))
         self._detV = np.prod(self._v)
 
-    def __call__(self, xs):
+    def mahalanobis(self, xs):
         if xs.ndim == 1:
             xs = np.reshape(xs, (1, xs.size))
         ys = (xs.T - self._m).T
-        u2 = np.sum(self._invv * (ys ** 2).T, 1)
-        return self._K * np.exp(-.5 * u2)
+        return np.sum(self._invv * (ys ** 2).T, 1)
+
+    def log(self, xs):
+        return np.log(self._K) - .5 * self.mahalanobis(xs)
+
+    def __call__(self, xs, log=True):
+        """
+        Evaluate the Gaussian at specified points.
+        xs must have shape (dim, npts)
+        """
+        return self._K * np.exp(-.5 * self.mahalanobis(xs))
 
     def sample(self, ndraws=1):
         xs = (np.sqrt(np.abs(self._v)) * np.random.normal(size=(self._dim, ndraws)).T).T
@@ -318,7 +332,7 @@ class FactorGaussian(object):
         elif isinstance(other, Gaussian):
             return Gaussian(theta=self.embed().theta + other.theta)
         else:
-            raise ValueError('wrong multiplication argument')
+            self._K *= other
 
     def __div__(self, other):
         if isinstance(other, self.__class__):
@@ -326,7 +340,7 @@ class FactorGaussian(object):
         elif instance(other, Gaussian):
             return Gaussian(theta=self.embed().theta - other.theta)
         else:
-            raise ValueError('wrong division argument')
+            self._K /= other
 
     def __pow__(self, power):
         return self.__class__(theta=power * self.theta)

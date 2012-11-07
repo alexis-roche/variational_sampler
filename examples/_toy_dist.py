@@ -31,7 +31,7 @@ class ExponentialPowerLaw():
                       ** self.dim
 
     def __call__(self, x):
-        return self.K * (np.exp(-norm(x / self.alpha, 0, beta=self.beta)))
+        return np.log(self.K) - norm(x / self.alpha, 0, beta=self.beta)
 
     def draw(self):
         return np.sqrt(self.v) * np.squeeze(np.random.normal(size=self.dim))

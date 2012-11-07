@@ -14,17 +14,15 @@ families = {'gaussian': GaussianFamily,
 
 class ImportanceFit(object):
 
-    def __init__(self, target, sample, family='gaussian'):
+    def __init__(self, sample, family='gaussian'):
         """
         Naive variational sampler object.
         """
-        self._init_from_sample(target, sample, family)
+        self._init_from_sample(sample, family)
 
-    def _init_from_sample(self, target, sample, family):
+    def _init_from_sample(self, sample, family):
         t0 = time()
-        self.target = target
         self.sample = sample
-        self.context = sample.context
         self.dim = sample.x.shape[0]
         self.npts = sample.x.shape[1]
         
@@ -39,25 +37,23 @@ class ImportanceFit(object):
         self.time = time() - t0
 
     def _do_fitting(self):
-        F = self._cache['F']
-        p = self.target(self.sample.x).squeeze()
-        if not self.sample.w is None:
-            p *= self.sample.w
-        moment = np.dot(F, p) / self.npts
+        F, pw = self._cache['F'], self.sample.pw
+        moment = np.dot(F, pw) / self.npts
         self._loc_fit = self.family.from_moment(moment)
         self._set_theta()
+
         # Compute variance on moment estimate
-        self._var_moment = np.dot(F * (p ** 2), F.T) / self.npts \
+        self._var_moment = np.dot(F * (pw ** 2), F.T) / self.npts \
             - np.dot(moment.reshape(moment.size, 1), moment.reshape(1, moment.size))
 
     def _set_theta(self):
-        if self.context is None:
+        if self.sample.context is None:
             self._theta = self._loc_fit.theta
-        elif self.family.check(self.context):
-            self._theta = self._loc_fit.theta - self.context.theta
+        elif self.family.check(self.sample.context):
+            self._theta = self._loc_fit.theta - self.sample.context.theta
         else:
             try:
-                fit = self._loc_fit / self.context
+                fit = self._loc_fit / self.sample.context
                 self._theta = fit.theta
             except:
                 self._theta = None
@@ -79,9 +75,8 @@ class ImportanceFit(object):
 
     def _get_fisher_info(self):
         F = self._cache['F']
-        q = np.nan_to_num(np.exp(np.dot(F.T, np.nan_to_num(self.theta))))
-        if not self.sample.w is None:
-            q *= self.sample.w
+        q = np.nan_to_num(np.exp(np.dot(F.T, np.nan_to_num(self.theta))\
+                                     + self.sample.log_w))
         return np.dot(F * q, F.T) / self.npts
 
     def _get_var_theta(self):
@@ -104,6 +99,6 @@ class ImportanceFit(object):
 class ImportanceSampler(ImportanceFit):  
     def __init__(self, target, kernel, context=None, ndraws=None, reflect=False,
                  family='gaussian'):
-        S = Sample(kernel, context=context, ndraws=ndraws, reflect=reflect)
-        self._init_from_sample(target, S, family)
+        S = Sample(target, kernel, context=context, ndraws=ndraws, reflect=reflect)
+        self._init_from_sample(S, family)
 

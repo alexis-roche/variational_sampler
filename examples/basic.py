@@ -7,9 +7,9 @@ def target(x, beta=2):
     """
     Function that takes an array with shape (dim, n) as input and
     returns an array with shape (n,) that contains the corresponding
-    target distribution values.
+    target log-distribution values.
     """
-    return np.exp(np.sum(-.5 * np.abs(x) ** beta, 0))
+    return np.sum(-.5 * np.abs(x) ** beta, 0)
 
 
 """

@@ -10,27 +10,28 @@ from variational_sampler.sampling import Sample
 from _toy_dist import ExponentialPowerLaw
 from _display import display_fit
 
-BETA = .5
+BETA = 1
 NPTS = 10
 
 
 def gauss_hermite(target, h2, npts):
+    p = lambda x: np.exp(target(x))
     x, w = h_roots(npts)
     x = x.real * np.sqrt(2 * h2)
     c = 1 / np.sqrt(np.pi)
-    Z = c * np.sum(w * target(x))
-    m = c * np.sum(w * x * target(x)) / Z
-    V = c * np.sum(w * (x ** 2) * target(x)) / Z - m ** 2
+    Z = c * np.sum(w * p(x))
+    m = c * np.sum(w * x * p(x)) / Z
+    V = c * np.sum(w * (x ** 2) * p(x)) / Z - m ** 2
     return Gaussian(m, V, Z=Z)
 
 target = ExponentialPowerLaw(beta=BETA)
 v = target.V.squeeze()
 h2 = 10 * v
 
-s = Sample((0, h2), context='kernel', ndraws=NPTS)
-vs = VariationalFit(target, s, maxiter=10)
-v0 = ImportanceFit(target, s)
-v1 = GaussianProcessFit(target, s, var=v)
+s = Sample(target, (0, h2), context='kernel', ndraws=NPTS)
+vs = VariationalFit(s)
+v0 = ImportanceFit(s)
+v1 = GaussianProcessFit(s, var=v)
 
 gs_loc_fit = gauss_hermite(target, h2, 250)
 gh_loc_fit = gauss_hermite(target, h2, NPTS)

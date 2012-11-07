@@ -15,8 +15,7 @@ families = {'gaussian': GaussianFamily,
 
 class VariationalFit(object):
     
-    def __init__(self, target, sample, family='gaussian',
-                 theta=None, tol=1e-5, maxiter=None,
+    def __init__(self, sample, family='gaussian', tol=1e-5, maxiter=None,
                  minimizer='newton'):
         """
         Variational sampler object.
@@ -32,16 +31,14 @@ class VariationalFit(object):
         minimizer : string
           One of 'newton', 'quasi_newton', steepest', 'conjugate'
         """
-        self._init_from_sample(target, sample, family, theta, tol, maxiter, minimizer)
+        self._init_from_sample(sample, family, tol, maxiter, minimizer)
 
-    def _init_from_sample(self, target, sample, family, theta, tol, maxiter, minimizer):
+    def _init_from_sample(self, sample, family, tol, maxiter, minimizer):
         """
         Init object given a sample instance.
         """
         t0 = time()
-        self.target = target
         self.sample = sample
-        self.context = sample.context
         self.dim = sample.x.shape[0]
         self.npts = sample.x.shape[1]
 
@@ -49,28 +46,13 @@ class VariationalFit(object):
         if family not in families.keys():
             raise ValueError('unknown family')
         self.family = families[family](self.dim)
-        p = self.target(sample.x).squeeze()
-        log_p = np.nan_to_num(np.log(p))
-        if not sample.w is None:
-            p *= sample.w
         self._cache = {
             'theta': None,
             'F': self.family.design_matrix(sample.x),
-            'pw': p,
-            'log_p': log_p,
-            'qw': np.zeros(p.size),
-            'log_q': np.zeros(p.size)}
-
-        # Initial guess
-        if theta is None:
-            self._theta = np.zeros(self._cache['F'].shape[0])
-            if sample.w is None:
-                W = self.npts
-            else:
-                W = np.sum(sample.w)
-            self._theta[-1] = np.nan_to_num(np.log(np.sum(p) / W))
-        else:
-            self._theta = np.asarray(theta)
+            'pw': self.sample.pw,
+            'log_p': self.sample.log_p,
+            'qw': np.zeros(self.sample.pw.size),
+            'log_q': np.zeros(self.sample.pw.size)}
 
         # Perform fitting
         self.minimizer = minimizer
@@ -86,9 +68,7 @@ class VariationalFit(object):
         c = self._cache
         if not theta is c['theta']:
             c['log_q'][:] = np.dot(c['F'].T, np.nan_to_num(theta))
-            c['qw'][:] = np.nan_to_num(np.exp(c['log_q']))
-            if not self.sample.w is None:
-                c['qw'] *= self.sample.w
+            c['qw'][:] = np.nan_to_num(np.exp(c['log_q'] + self.sample.log_w))
             c['theta'] = theta
 
     def _loss(self, theta):
@@ -130,19 +110,11 @@ class VariationalFit(object):
         c = self._cache
         return np.dot(c['F'] * c['pw'], c['F'].T)
 
-    def _var_moment(self, theta):
-        c = self._cache
-        return np.dot(c['F'] * ((c['pw'] - c['qw']) ** 2), c['F'].T)\
-            / self.npts
-
-    def _fisher_info(self, theta):
-        return self._hessian(self.theta) / self.npts
-
     def _do_fitting(self):
         """
         Perform Gaussian approximation.
         """
-        theta = self._theta
+        theta = np.zeros(self._cache['F'].shape[0])
         meth = self.minimizer
         if meth not in min_methods.keys():
             raise ValueError('unknown minimizer')
@@ -161,6 +133,14 @@ class VariationalFit(object):
         self._theta = m.argmin()
         self.minimizer = m
 
+    def _var_moment(self, theta):
+        c = self._cache
+        return np.dot(c['F'] * ((c['pw'] - c['qw']) ** 2), c['F'].T)\
+            / self.npts
+
+    def _fisher_info(self, theta):
+        return self._hessian(self.theta) / self.npts
+
     def _get_theta(self):
         return self._theta
 
@@ -168,13 +148,13 @@ class VariationalFit(object):
         return self.family.from_theta(self.theta)
 
     def _get_loc_fit(self):
-        if self.context is None:
+        if self.sample.context is None:
             return self._get_fit()
-        elif self.family.check(self.context):
-            return self.family.from_theta(self.theta + self.context.theta)
+        elif self.family.check(self.sample.context):
+            return self.family.from_theta(self.theta + self.sample.context.theta)
         else:
             try:
-                return self._get_fit() * self.context
+                return self._get_fit() * self.sample.context
             except:
                 warn('cannnot multiply fit with context')
                 return None
@@ -209,5 +189,5 @@ class VariationalFit(object):
 class VariationalSampler(VariationalFit):
     def __init__(self, target, kernel, context=None, ndraws=None, reflect=False,
                  family='gaussian', theta=None, tol=1e-5, maxiter=None, minimizer='newton'):
-        S = Sample(kernel, context=context, ndraws=ndraws, reflect=reflect)
-        self._init_from_sample(target, S, family, theta, tol, maxiter, minimizer)
+        S = Sample(target, kernel, context=context, ndraws=ndraws, reflect=reflect)
+        self._init_from_sample(S, family, tol, maxiter, minimizer)

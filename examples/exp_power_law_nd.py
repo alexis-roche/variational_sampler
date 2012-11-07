@@ -16,10 +16,10 @@ target = ExponentialPowerLaw(beta=BETA, dim=DIM)
 
 h2 = np.diagonal(target.V)
 
-s = Sample((np.zeros(DIM), h2), ndraws=NPTS)
-vs = VariationalFit(target, s)
-v0 = ImportanceFit(target, s)
-v1 = GaussianProcessFit(target, s, var=h2)
+s = Sample(target, (np.zeros(DIM), h2), ndraws=NPTS)
+vs = VariationalFit(s)
+v0 = ImportanceFit(s)
+v1 = GaussianProcessFit(s, var=h2)
 gopt = Gaussian(target.m, target.V, Z=target.Z)
 
 print('Error for VS: %f (expected: %f)'\
