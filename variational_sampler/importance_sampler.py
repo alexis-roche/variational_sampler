@@ -2,7 +2,7 @@ from time import time
 from warnings import warn
 import numpy as np
 
-from .numlib import inv_sym_matrix
+from .numlib import safe_exp, inv_sym_matrix
 from .sampling import Sample
 from .gaussian import (GaussianFamily,
                        FactorGaussianFamily)
@@ -37,14 +37,18 @@ class ImportanceFit(object):
         self.time = time() - t0
 
     def _do_fitting(self):
-        F, pw = self._cache['F'], self.sample.pw
+        F = self._cache['F']
+        pw, self.logscale = safe_exp(self.sample.log_p + self.sample.log_w)
         moment = np.dot(F, pw) / self.npts
         self._loc_fit = self.family.from_moment(moment)
+        scale = np.exp(self.logscale)
+        self._loc_fit.rescale(scale)
         self._set_theta()
 
         # Compute variance on moment estimate
         self._var_moment = np.dot(F * (pw ** 2), F.T) / self.npts \
             - np.dot(moment.reshape(moment.size, 1), moment.reshape(1, moment.size))
+        self._var_moment *= scale ** 2
 
     def _set_theta(self):
         if self.sample.context is None:

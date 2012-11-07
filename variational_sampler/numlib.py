@@ -21,6 +21,11 @@ def hdot(x, A):
     return np.dot(x, np.dot(A, x))
 
 
+def safe_exp(x):
+    xmax = x.max()
+    return np.exp(x - xmax), xmax
+
+
 def decomp_sym_matrix(A):
     s, P = eigh(A)
     sign_s = 2. * (s >= 0) - 1

@@ -13,7 +13,6 @@ from _display import display_fit
 BETA = 1
 NPTS = 10
 
-
 def gauss_hermite(target, h2, npts):
     p = lambda x: np.exp(target(x))
     x, w = h_roots(npts)

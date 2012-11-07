@@ -4,7 +4,7 @@ from scipy.linalg import cho_factor, cho_solve
 
 from .gaussian import FactorGaussian
 from .gaussian_mixture import GaussianMixture
-
+from .numlib import safe_exp
 
 class GaussianProcessFit(object):
 
@@ -57,7 +57,7 @@ class GaussianProcessFit(object):
 
         # Solve for the spline coefficients and compute model evidence
         L, lower = cho_factor(G, lower=0)
-        p = np.exp(self.sample.log_p)
+        p, self.logscale = safe_exp(self.sample.log_p)
         self._theta = cho_solve((L, 0), p)
 
     def _get_theta(self):
@@ -65,12 +65,14 @@ class GaussianProcessFit(object):
 
     def _get_fit(self):
         x = self.sample.x
-        gaussians = [FactorGaussian(xi, self._v, K=1) for xi in x.T]
+        K = np.exp(self.logscale)
+        gaussians = [FactorGaussian(xi, self._v, K=K) for xi in x.T]
         return GaussianMixture(self._theta, gaussians)
 
     def _get_loc_fit(self):
         x = self.sample.x
-        gaussians = [self.sample.context * FactorGaussian(xi, self._v, K=1) for xi in x.T]
+        K = np.exp(self.logscale)
+        gaussians = [self.sample.context * FactorGaussian(xi, self._v, K=K) for xi in x.T]
         return GaussianMixture(self._theta, gaussians)
 
     theta = property(_get_theta)

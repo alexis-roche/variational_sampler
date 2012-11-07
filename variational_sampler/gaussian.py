@@ -136,6 +136,9 @@ class Gaussian(object):
         self._m = np.dot(self._V, theta[self._dim2:-1])
         self._K = np.exp(theta[-1] + .5 * hdot(self._m, invV))
 
+    def rescale(self, c):
+        self._K *= c
+
     def mahalanobis(self, xs):
         if xs.ndim == 1:
             xs = np.reshape(xs, (1, xs.size))
@@ -158,7 +161,7 @@ class Gaussian(object):
         elif hasattr(other, 'embed'):
             return self.__class__(theta=self.theta + other.embed().theta)
         else:
-            self._K *= other
+            raise ValueError('unsupported multiplitcation')
 
     def __div__(self, other):
         if isinstance(other, self.__class__):
@@ -166,7 +169,7 @@ class Gaussian(object):
         elif hasattr(other, 'embed'):
             return self.__class__(theta=self.theta - other.embed().theta)
         else:
-            self.K /= other
+            raise ValueError('unsupported division')
         
     def __pow__(self, power):
         return self.__class__(theta=power * self.theta)
@@ -293,12 +296,15 @@ class FactorGaussian(object):
         self._K = np.exp(theta[-1] + .5 * np.dot(self._m, invv * self._m))
         self._detV = np.prod(self._v)
 
+    def rescale(self, c):
+        self._K *= c
+
     def mahalanobis(self, xs):
         if xs.ndim == 1:
             xs = np.reshape(xs, (1, xs.size))
         ys = (xs.T - self._m).T
         return np.sum(self._invv * (ys ** 2).T, 1)
-
+    
     def log(self, xs):
         return np.log(self._K) - .5 * self.mahalanobis(xs)
 
@@ -332,7 +338,7 @@ class FactorGaussian(object):
         elif isinstance(other, Gaussian):
             return Gaussian(theta=self.embed().theta + other.theta)
         else:
-            self._K *= other
+            raise ValueError('unsupported multiplication')
 
     def __div__(self, other):
         if isinstance(other, self.__class__):
@@ -340,7 +346,7 @@ class FactorGaussian(object):
         elif instance(other, Gaussian):
             return Gaussian(theta=self.embed().theta - other.theta)
         else:
-            self._K /= other
+            raise ValueError('unsupported division')
 
     def __pow__(self, power):
         return self.__class__(theta=power * self.theta)

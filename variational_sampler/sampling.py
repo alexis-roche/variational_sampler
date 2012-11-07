@@ -33,11 +33,12 @@ def as_gaussian(g):
 
 def sample_fun(f, x):
     try:
+        ff = f
         y = f(x).squeeze()
     except:
-        f = lambda x: np.array([f(xi) for xi in x.T])
-        y = f(x).squeeze()
-    return y, f
+        ff = lambda x: np.array([f(xi) for xi in x.T])
+        y = ff(x).squeeze()
+    return y, ff
 
 
 class Sample(object):
@@ -101,5 +102,4 @@ class Sample(object):
             self.log_w = -self.kernel.log(self.x)
         else:
             self.log_w = self.context.log(self.x) - self.kernel.log(self.x)
-        self.pw = np.exp(self.log_p + self.log_w)
 

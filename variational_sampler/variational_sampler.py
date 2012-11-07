@@ -2,11 +2,9 @@ from time import time
 from warnings import warn
 import numpy as np
 
-from .numlib import (inv_sym_matrix,
-                     min_methods)
+from .numlib import safe_exp, inv_sym_matrix, min_methods
 from .sampling import Sample
-from .gaussian import (GaussianFamily,
-                       FactorGaussianFamily)
+from .gaussian import GaussianFamily, FactorGaussianFamily
 
 
 families = {'gaussian': GaussianFamily,
@@ -46,13 +44,15 @@ class VariationalFit(object):
         if family not in families.keys():
             raise ValueError('unknown family')
         self.family = families[family](self.dim)
+        pw, self.logscale = safe_exp(self.sample.log_p + self.sample.log_w)
         self._cache = {
             'theta': None,
             'F': self.family.design_matrix(sample.x),
-            'pw': self.sample.pw,
+            'pw': pw,
             'log_p': self.sample.log_p,
-            'qw': np.zeros(self.sample.pw.size),
-            'log_q': np.zeros(self.sample.pw.size)}
+            'qw': None,
+            'log_q': None
+            }
 
         # Perform fitting
         self.minimizer = minimizer
@@ -67,8 +67,9 @@ class VariationalFit(object):
         """
         c = self._cache
         if not theta is c['theta']:
-            c['log_q'][:] = np.dot(c['F'].T, np.nan_to_num(theta))
-            c['qw'][:] = np.nan_to_num(np.exp(c['log_q'] + self.sample.log_w))
+            c['log_q'] = np.dot(c['F'].T, np.nan_to_num(theta))
+            c['qw'] = np.nan_to_num(np.exp(\
+                    c['log_q'] + self.sample.log_w - self.logscale))
             c['theta'] = theta
 
     def _loss(self, theta):
@@ -136,10 +137,10 @@ class VariationalFit(object):
     def _var_moment(self, theta):
         c = self._cache
         return np.dot(c['F'] * ((c['pw'] - c['qw']) ** 2), c['F'].T)\
-            / self.npts
+            * (np.exp(2 * self.logscale) / self.npts)
 
     def _fisher_info(self, theta):
-        return self._hessian(self.theta) / self.npts
+        return self._hessian(self.theta) * (np.exp(self.logscale) / self.npts)
 
     def _get_theta(self):
         return self._theta

@@ -72,6 +72,18 @@ def test2d_input_natural_params():
         assert_almost_equal(g.Z, TWO_PI)
         assert_almost_equal(g.K, 1)
 
+
+def test_rescale():
+    for c, v in zip((Gaussian, FactorGaussian),
+                    (np.eye(2), np.ones(2))):
+        g = c([0, 0], v)
+        K = g.K
+        g.rescale(10)
+        assert_array_equal(g.m, [0, 0])
+        assert_array_equal(g.V, np.eye(2))
+        assert_array_equal(g.K, 10 * K)
+
+
 def test_multiply():
     for c, v in zip((Gaussian, FactorGaussian),
                     (np.eye(2), np.ones(2))):
