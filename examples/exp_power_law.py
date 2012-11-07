@@ -10,8 +10,8 @@ from variational_sampler.sampling import Sample
 from _toy_dist import ExponentialPowerLaw
 from _display import display_fit
 
-BETA = 2
-NPTS = 1000
+BETA = 1
+NPTS = 10
 
 def gauss_hermite(target, h2, npts):
     p = lambda x: np.exp(target(x))
@@ -24,7 +24,7 @@ def gauss_hermite(target, h2, npts):
     return Gaussian(m, V, Z=Z)
 
 target = ExponentialPowerLaw(beta=BETA)
-v = target.V.squeeze()
+v = target.V
 h2 = 10 * v
 
 s = Sample(target, (0, h2), context='kernel', ndraws=NPTS)

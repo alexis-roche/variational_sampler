@@ -48,7 +48,7 @@ class ImportanceFit(object):
         # Compute variance on moment estimate
         self._var_moment = np.dot(F * (pw ** 2), F.T) / self.npts \
             - np.dot(moment.reshape(moment.size, 1), moment.reshape(1, moment.size))
-        self._var_moment *= scale ** 2
+        self._var_moment *= (scale ** 2 / self.npts)
 
     def _set_theta(self):
         if self.sample.context is None:
@@ -88,8 +88,7 @@ class ImportanceFit(object):
         return np.dot(np.dot(inv_fisher_info, self._var_moment), inv_fisher_info)
 
     def _get_kl_error(self):
-        return np.trace(self.var_moment * inv_sym_matrix(self.fisher_info))\
-            / (2 * self.npts)
+        return .5 * np.trace(self.var_moment * inv_sym_matrix(self.fisher_info))
 
     theta = property(_get_theta)
     fit = property(_get_fit)

@@ -137,7 +137,7 @@ class VariationalFit(object):
     def _var_moment(self, theta):
         c = self._cache
         return np.dot(c['F'] * ((c['pw'] - c['qw']) ** 2), c['F'].T)\
-            * (np.exp(2 * self.logscale) / self.npts)
+            * (np.exp(2 * self.logscale) / (self.npts ** 2))
 
     def _fisher_info(self, theta):
         return self._hessian(self.theta) * (np.exp(self.logscale) / self.npts)
@@ -175,8 +175,7 @@ class VariationalFit(object):
         """
         Estimate the expected excess KL divergence.
         """
-        return np.trace(self.var_moment * inv_sym_matrix(self.fisher_info))\
-            / (2 * self.npts)
+        return .5 * np.trace(self.var_moment * inv_sym_matrix(self.fisher_info))
 
     theta = property(_get_theta)
     fit = property(_get_fit)
