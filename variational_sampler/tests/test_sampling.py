@@ -5,22 +5,30 @@ from numpy.testing import assert_array_equal, assert_array_almost_equal
 from ..sampling import Sample
 
 
+def target1d(x):
+    return -.5 * x ** 2
+
+
+def target(x):
+    return -.5 * np.sum(x ** 2, 0)
+
+
 def test1d_basic():
-    s = Sample((0, 1), ndraws=10)
+    s = Sample(target1d, (0, 1), ndraws=10)
     assert_equal(s.x.size, 10)
 
 
 def test1d_with_reflection():
-    s = Sample((0, 1), context='kernel', ndraws=10, reflect=True)
+    s = Sample(target1d, (0, 1), context='kernel', ndraws=10, reflect=True)
     assert_equal(s.x.size, 20)
     assert_almost_equal(s.x.sum(), 0)
 
 
 def test1d_custom_generator():
-    s = Sample((1, 2), context=(0, 1), ndraws=10, reflect=True)
+    s = Sample(target1d, (1, 2), context=(0, 1), ndraws=10, reflect=True)
     assert_equal(s.x.size, 20)
-    assert_array_equal(0 * s.w, np.zeros(20))
+
 
 def test2d_basic():
-    s = Sample((np.zeros(2), np.eye(2)), context='kernel', ndraws=10)
+    s = Sample(target, (np.zeros(2), np.eye(2)), context='kernel', ndraws=10)
     assert_equal(s.x.shape, (2, 10))

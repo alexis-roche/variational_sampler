@@ -8,11 +8,11 @@ from ..gaussian import (Gaussian, FactorGaussian)
 
 
 def target1d(x):
-    return np.exp(-.5 * x ** 2)
+    return -.5 * x ** 2
 
 
 def target(x):
-    return np.exp(-.5 * np.sum(x ** 2, 0))
+    return -.5 * np.sum(x ** 2, 0)
 
 
 def _test_basic(vs):
@@ -43,7 +43,7 @@ def test2d_cs_basic():
 
 def test_loss():
     vs = VariationalSampler(target1d, (0, 1), context='kernel', ndraws=10)
-    vs._cache['q'][:] = 0
+    vs._cache['qw'][:] = 0
     vs._cache['log_q'][:] = -np.inf
     vs._cache['theta'] = None
     assert_equal(vs._loss(None), np.inf)
@@ -56,8 +56,9 @@ def _test_vs_exactness(dim):
     A = np.random.random((dim, dim))
     V = np.dot(A, A.T)
     g = Gaussian(m, V)
+    log_g = lambda x: g.log(x)
     ndraws = ((dim + 1) * (dim + 2)) / 2
-    vs = VariationalSampler(g, g, ndraws=ndraws)
+    vs = VariationalSampler(log_g, g, ndraws=ndraws)
     assert_almost_equal(vs.fit.Z, 1, decimal=2)
     assert_array_almost_equal(vs.fit.m, m, decimal=2)
     assert_array_almost_equal(vs.fit.V, V, decimal=2)
@@ -79,8 +80,9 @@ def _test_vs_exactness_factor_gauss(dim):
     m = np.zeros(dim)
     v = np.random.random(dim) ** 2
     g = FactorGaussian(m, v)
+    log_g = lambda x: g.log(x)
     ndraws = 2 * dim + 1
-    vs = VariationalSampler(g, g, ndraws=ndraws,
+    vs = VariationalSampler(log_g, g, ndraws=ndraws,
                             family='factor_gaussian')
     assert_almost_equal(vs.fit.Z, 1, decimal=2)
     assert_array_almost_equal(vs.fit.m, m, decimal=2)
