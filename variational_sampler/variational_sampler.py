@@ -14,7 +14,7 @@ families = {'gaussian': GaussianFamily,
 class VariationalFit(object):
     
     def __init__(self, sample, family='gaussian', tol=1e-5, maxiter=None,
-                 minimizer='newton'):
+                 minimizer='newton', theta=None):
         """
         Variational sampler object.
 
@@ -29,9 +29,9 @@ class VariationalFit(object):
         minimizer : string
           One of 'newton', 'quasi_newton', steepest', 'conjugate'
         """
-        self._init_from_sample(sample, family, tol, maxiter, minimizer)
+        self._init_from_sample(sample, family, tol, maxiter, minimizer, theta)
 
-    def _init_from_sample(self, sample, family, tol, maxiter, minimizer):
+    def _init_from_sample(self, sample, family, tol, maxiter, minimizer, theta):
         """
         Init object given a sample instance.
         """
@@ -54,10 +54,14 @@ class VariationalFit(object):
             'log_q': None
             }
 
-        # Optimal constant fit (to be used as initial guess)
-        tmp = np.sum(self._cache['pw'])
-        tmp2 = np.sum(np.exp(self.sample.log_w - self.logscale))
-        self.theta0 = np.nan_to_num(np.log(tmp / tmp2))
+        # Initial guess for theta parameter (default is optimal constant fit)
+        if theta is None:
+            self._theta_init = np.zeros(self._cache['F'].shape[0])
+            tmp = np.sum(self._cache['pw'])
+            tmp2 = np.sum(np.exp(self.sample.log_w - self.logscale))
+            self._theta_init[0] = np.nan_to_num(np.log(tmp / tmp2))
+        else:
+            self._theta_init = np.asarray(theta)
 
         # Perform fitting
         self.minimizer = minimizer
@@ -72,22 +76,26 @@ class VariationalFit(object):
         """
         c = self._cache
         if not theta is c['theta']:
-            c['log_q'] = np.dot(c['F'].T, np.nan_to_num(theta))
-            c['qw'] = np.nan_to_num(np.exp(\
-                    c['log_q'] + self.sample.log_w - self.logscale))
+            c['log_q'] = np.dot(c['F'].T, theta)
+            c['qw'] = np.exp(c['log_q'] + self.sample.log_w - self.logscale)
             c['theta'] = theta
+            fail = np.isinf(c['log_q']).max() or np.isinf(c['qw']).max()
+        else:
+            fail = False
+        return not fail
 
     def _loss(self, theta):
         """
         Compute the empirical divergence:
 
-          sum[p * log p/q + q - p],
+          sum[pw * log pw/qw + qw - pw],
 
         where:
-          p is the target distribution
-          q is the parametric fit
+          pw is the target distribution
+          qw is the parametric fit
         """
-        self._udpate_fit(theta)
+        if not self._udpate_fit(theta):
+            return np.inf
         c = self._cache
         return np.sum(c['pw'] * (c['log_p'] - c['log_q'])
                       + c['qw'] - c['pw'])
@@ -120,11 +128,7 @@ class VariationalFit(object):
         """
         Perform Gaussian approximation.
         """
-        # Initial guess for theta: optimal constant fit
-        theta = np.zeros(self._cache['F'].shape[0])
-        theta[0] = self.theta0
-
-        # Run the optimizer
+        theta = self._theta_init
         meth = self.minimizer
         if meth not in min_methods.keys():
             raise ValueError('unknown minimizer')
@@ -197,6 +201,6 @@ class VariationalFit(object):
 
 class VariationalSampler(VariationalFit):
     def __init__(self, target, kernel, context=None, ndraws=None, reflect=False,
-                 family='gaussian', theta=None, tol=1e-5, maxiter=None, minimizer='newton'):
+                 family='gaussian', tol=1e-5, maxiter=None, minimizer='newton', theta=None):
         S = Sample(target, kernel, context=context, ndraws=ndraws, reflect=reflect)
-        self._init_from_sample(S, family, tol, maxiter, minimizer)
+        self._init_from_sample(S, family, tol, maxiter, minimizer, theta)

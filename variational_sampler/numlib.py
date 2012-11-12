@@ -55,9 +55,9 @@ class SteepestDescent(object):
         self.fval = self.f(self.x)
         self.fval0 = self.fval
         self.iter = 0
-        self.a = 1
         self.nevals = 1
-        
+        self.a = 1
+
     def direction(self):
         return np.nan_to_num(-self.grad_f(self.x))
 
@@ -70,14 +70,14 @@ class SteepestDescent(object):
 
             # Compute descent direction
             dx = self.direction()
-            dx_inf = np.max(np.abs(dx))
+            dx_norm = np.max(np.abs(dx))
 
             # Line search
             done = False
             stuck = False
             a = self.a
             while not done:
-                x = xN + a * dx
+                x = np.nan_to_num(xN + a * dx)
                 fval = self.f(x)
                 self.nevals += 1
                 if fval < self.fval:
@@ -87,7 +87,7 @@ class SteepestDescent(object):
                     a *= 2
                 else:
                     a *= .5
-                    stuck = abs(a * dx_inf) < self.tol
+                    stuck = abs(a * dx_norm) < self.tol
                     done = self.fval < fvalN or stuck
 
             # Termination test
