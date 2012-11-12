@@ -54,6 +54,11 @@ class VariationalFit(object):
             'log_q': None
             }
 
+        # Optimal constant fit (to be used as initial guess)
+        tmp = np.sum(self._cache['pw'])
+        tmp2 = np.sum(np.exp(self.sample.log_w - self.logscale))
+        self.theta0 = np.nan_to_num(np.log(tmp / tmp2))
+
         # Perform fitting
         self.minimizer = minimizer
         self.tol = tol
@@ -115,7 +120,11 @@ class VariationalFit(object):
         """
         Perform Gaussian approximation.
         """
+        # Initial guess for theta: optimal constant fit
         theta = np.zeros(self._cache['F'].shape[0])
+        theta[0] = self.theta0
+
+        # Run the optimizer
         meth = self.minimizer
         if meth not in min_methods.keys():
             raise ValueError('unknown minimizer')
