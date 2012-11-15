@@ -385,7 +385,7 @@ class GaussianFamily(object):
         idx = np.triu_indices(self._dim)
         V[idx] = moment[(self._dim + 1):] / Z
         V.T[np.triu_indices(self._dim)] = V[idx]
-        V -= np.diag(m ** 2)
+        V -= np.dot(m.reshape(m.size, 1), m.reshape(1, m.size))
         return Gaussian(m, V, Z=Z)
         
     def from_theta(self, theta):

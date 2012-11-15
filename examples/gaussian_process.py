@@ -27,7 +27,7 @@ v = VariationalSampler(loglikelihood, prior,
                        ndraws=1000000)
 
 """
-v2 = VariationalSampler(likelihood, prior,
+v2 = VariationalSampler(loglikelihood, prior,
                        context='kernel',
                        family='factor_gaussian',
                        ndraws=1000)

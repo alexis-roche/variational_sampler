@@ -8,8 +8,8 @@ from variational_sampler.gaussian import Gaussian
 from _toy_dist import ExponentialPowerLaw
 
 
-BETA = 1.5
-DIM = 20
+BETA = 2
+DIM = 2
 NPTS = 10 * DIM ** 2
 
 target = ExponentialPowerLaw(beta=BETA, dim=DIM)
