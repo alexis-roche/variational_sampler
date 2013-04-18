@@ -1,206 +1,132 @@
+"""
+Variational sampling
+"""
 from time import time
-from warnings import warn
 import numpy as np
+import warnings
 
-from .numlib import safe_exp, inv_sym_matrix, min_methods
-from .sampling import Sample
-from .gaussian import GaussianFamily, FactorGaussianFamily
+from .numlib import force_tiny
+from .gaussian import Gaussian, FactorGaussian
+from .kl_fit import KLFit
+from .naive_kl_fit import NaiveKLFit
+from .gp_fit import GPFit
+
+"""
+FIXME: reflect wrt the mean, not zero!
+"""
+def reflect_sample(xs):
+    return np.reshape(np.array([xs.T, -xs.T]).T,
+                      [xs.shape[0], 2 * xs.shape[1]])
 
 
-families = {'gaussian': GaussianFamily,
-            'factor_gaussian': FactorGaussianFamily}
+def as_gaussian(g):
+    if isinstance(g, Gaussian) or isinstance(g, FactorGaussian):
+        return g
+    try:
+        m = np.asarray(g[0])
+        V = np.asarray(g[1])
+        if V.ndim < 2:
+            G = FactorGaussian(m, V)
+        elif V.ndim == 2:
+            G = Gaussian(m, V)
+        else:
+            raise ValueError('input variance not understood')
+    except:
+        raise ValueError('input not understood')
+    return G
 
 
-class VariationalFit(object):
-    
-    def __init__(self, sample, family='gaussian', tol=1e-5, maxiter=None,
-                 minimizer='newton', theta=None):
+def sample_fun(f, x):
+    try:
+        ff = f
+        y = f(x).squeeze()
+    except:
+        ff = lambda x: np.array([f(xi) for xi in x.T])
+        y = ff(x).squeeze()
+    return y, ff
+
+
+class VariationalSampler(object):
+
+    def __init__(self, target, kernel, ndraws, reflect=False,
+                 context=None):
         """
-        Variational sampler object.
+        Variational sampler class.
+
+        Fit a target distribution with a Gaussian distribution by
+        maximizing an approximate KL divergence based on independent
+        random sampling.
 
         Parameters
         ----------
-        tol : float
-          Tolerance on optimized parameter
+        target: callable
+          returns the log of the target distribution
 
-        maxiter : int
-          Maximum number of iterations in optimization
+        kernel: tuple
+          a tuple `(m, V)` where `m` is a vector representing the mean
+          of the sampling distribution and `V` is a matrix or vector
+          representing the variance. If a vector, a diagonal variance
+          is assumed.
 
-        minimizer : string
-          One of 'newton', 'quasi_newton', steepest', 'conjugate'
-        """
-        self._init_from_sample(sample, family, tol, maxiter, minimizer, theta)
+        ndraws: int
+          sample size
 
-    def _init_from_sample(self, sample, family, tol, maxiter, minimizer, theta):
+        reflect: bool
+          if True, symmeterize the sample with respect to the sampling
+          kernel mean
+
+        context: tuple
+          a tuple `(m, V)` similar to the kernel argument that defines
+          the local KL divergence used as a fitting objective. If
+          None, the global KL divergence is used.
         """
-        Init object given a sample instance.
-        """
+        self.kernel = as_gaussian(kernel)
+        self.target = target
+        if context is None:
+            self.context = None
+        elif context == 'kernel':
+            self.context = self.kernel
+        else:
+            self.context = as_gaussian(context)
+        self.ndraws = ndraws
+        self.reflect = reflect
+
+        # Sample random points
         t0 = time()
-        self.sample = sample
-        self.dim = sample.x.shape[0]
-        self.npts = sample.x.shape[1]
+        self._sample()
+        self.sampling_time = time() - t0
 
-        # Instantiate fitting family
-        if family not in families.keys():
-            raise ValueError('unknown family')
-        self.family = families[family](self.dim)
-        pw, self.logscale = safe_exp(self.sample.log_p + self.sample.log_w)
-        self._cache = {
-            'theta': None,
-            'F': self.family.design_matrix(sample.x),
-            'pw': pw,
-            'log_p': self.sample.log_p,
-            'qw': None,
-            'log_q': None
-            }
-
-        # Initial guess for theta parameter (default is optimal constant fit)
-        if theta is None:
-            self._theta_init = np.zeros(self._cache['F'].shape[0])
-            tmp = np.sum(self._cache['pw'])
-            tmp2 = np.sum(np.exp(self.sample.log_w - self.logscale))
-            self._theta_init[0] = np.nan_to_num(np.log(tmp / tmp2))
+    def _sample(self):
+        """
+        Sample independent points from the specified kernel and
+        compute associated distribution values.
+        """
+        self.x = self.kernel.sample(ndraws=self.ndraws)
+        if self.reflect:
+            self.x = reflect_sample(self.x)
+        self.log_p, self.target = sample_fun(self.target, self.x)
+        if self.context is self.kernel:
+            self.log_w = np.zeros(self.log_p.size)
+        elif self.context is None:
+            self.log_w = -self.kernel.log(self.x)
         else:
-            self._theta_init = np.asarray(theta)
+            self.log_w = self.context.log(self.x) - self.kernel.log(self.x)
 
-        # Perform fitting
-        self.minimizer = minimizer
-        self.tol = tol
-        self.maxiter = maxiter
-        self._do_fitting()
-        self.time = time() - t0
-
-    def _udpate_fit(self, theta):
+    def fit(self, objective='kl', **args):
         """
-        Compute fit
+        Perform fitting.
+        
+        Parameters
+        ----------
+        objective: str
+          one of 'kl', 'naive_kl' or 'gp'
         """
-        c = self._cache
-        if not theta is c['theta']:
-            c['log_q'] = np.dot(c['F'].T, theta)
-            c['qw'] = np.exp(c['log_q'] + self.sample.log_w - self.logscale)
-            c['theta'] = theta
-            fail = np.isinf(c['log_q']).max() or np.isinf(c['qw']).max()
+        if objective == 'kl':
+            return KLFit(self, **args)
+        elif objective == 'naive_kl':
+            return NaiveKLFit(self, **args)
+        elif objective == 'gp':
+            return GPFit(self, **args)
         else:
-            fail = False
-        return not fail
-
-    def _loss(self, theta):
-        """
-        Compute the empirical divergence:
-
-          sum[pw * log pw/qw + qw - pw],
-
-        where:
-          pw is the target distribution
-          qw is the parametric fit
-        """
-        if not self._udpate_fit(theta):
-            return np.inf
-        c = self._cache
-        return np.sum(c['pw'] * (c['log_p'] - c['log_q'])
-                      + c['qw'] - c['pw'])
-
-    def _gradient(self, theta):
-        """
-        Compute the gradient of the loss.
-        """
-        self._udpate_fit(theta)
-        c = self._cache
-        return np.dot(c['F'], c['qw'] - c['pw'])
-
-    def _hessian(self, theta):
-        """
-        Compute the hessian of the loss.
-        """
-        self._udpate_fit(theta)
-        c = self._cache
-        return np.dot(c['F'] * c['qw'], c['F'].T)
-
-    def _pseudo_hessian(self):
-        """
-        Approximate the Hessian at the minimum by substituting the
-        fitted distribution with the target distribution.
-        """
-        c = self._cache
-        return np.dot(c['F'] * c['pw'], c['F'].T)
-
-    def _do_fitting(self):
-        """
-        Perform Gaussian approximation.
-        """
-        theta = self._theta_init
-        meth = self.minimizer
-        if meth not in min_methods.keys():
-            raise ValueError('unknown minimizer')
-        if meth in ('newton', 'ncg'):
-            m = min_methods[meth](theta, self._loss, self._gradient,
-                                  self._hessian,
-                                  maxiter=self.maxiter, tol=self.tol)
-        elif meth in ('quasi_newton',):
-            m = min_methods[meth](theta, self._loss, self._gradient,
-                                  self._pseudo_hessian(),
-                                  maxiter=self.maxiter, tol=self.tol)
-        else:
-            m = min_methods[meth](theta, self._loss, self._gradient,
-                                  maxiter=self.maxiter, tol=self.tol)
-        m.message()
-        self._theta = m.argmin()
-        self.minimizer = m
-
-    def _var_moment(self, theta):
-        c = self._cache
-        return np.dot(c['F'] * ((c['pw'] - c['qw']) ** 2), c['F'].T)\
-            * (np.exp(2 * self.logscale) / (self.npts ** 2))
-
-    def _fisher_info(self, theta):
-        return self._hessian(self.theta) * (np.exp(self.logscale) / self.npts)
-
-    def _get_theta(self):
-        return self._theta
-
-    def _get_fit(self):
-        return self.family.from_theta(self.theta)
-
-    def _get_loc_fit(self):
-        if self.sample.context is None:
-            return self._get_fit()
-        elif self.family.check(self.sample.context):
-            return self.family.from_theta(self.theta + self.sample.context.theta)
-        else:
-            try:
-                return self._get_fit() * self.sample.context
-            except:
-                warn('cannnot multiply fit with context')
-                return None
-
-    def _get_var_moment(self):
-        return self._var_moment(self.theta)
-
-    def _get_fisher_info(self):
-        return self._fisher_info(self.theta)
-
-    def _get_var_theta(self):
-        inv_fisher_info = inv_sym_matrix(self.fisher_info)
-        return np.dot(np.dot(inv_fisher_info, self._var_moment(self.theta)),
-                      inv_fisher_info)
-
-    def _get_kl_error(self):
-        """
-        Estimate the expected excess KL divergence.
-        """
-        return .5 * np.trace(self.var_moment * inv_sym_matrix(self.fisher_info))
-
-    theta = property(_get_theta)
-    fit = property(_get_fit)
-    loc_fit = property(_get_loc_fit)
-    var_moment = property(_get_var_moment)
-    var_theta = property(_get_var_theta)
-    fisher_info = property(_get_fisher_info)
-    kl_error = property(_get_kl_error)
-
-
-class VariationalSampler(VariationalFit):
-    def __init__(self, target, kernel, context=None, ndraws=None, reflect=False,
-                 family='gaussian', tol=1e-5, maxiter=None, minimizer='newton', theta=None):
-        S = Sample(target, kernel, context=context, ndraws=ndraws, reflect=reflect)
-        self._init_from_sample(S, family, tol, maxiter, minimizer, theta)
+            raise ValueError('unknown objective')
+        

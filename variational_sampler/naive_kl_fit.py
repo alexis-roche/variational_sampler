@@ -3,7 +3,6 @@ from warnings import warn
 import numpy as np
 
 from .numlib import safe_exp, inv_sym_matrix
-from .sampling import Sample
 from .gaussian import (GaussianFamily,
                        FactorGaussianFamily)
 
@@ -12,15 +11,12 @@ families = {'gaussian': GaussianFamily,
             'factor_gaussian': FactorGaussianFamily}
 
 
-class ImportanceFit(object):
+class NaiveKLFit(object):
 
     def __init__(self, sample, family='gaussian'):
         """
         Naive variational sampler object.
         """
-        self._init_from_sample(sample, family)
-
-    def _init_from_sample(self, sample, family):
         t0 = time()
         self.sample = sample
         self.dim = sample.x.shape[0]
@@ -97,11 +93,3 @@ class ImportanceFit(object):
     var_theta = property(_get_var_theta)
     fisher_info = property(_get_fisher_info)
     kl_error = property(_get_kl_error)
-
-
-class ImportanceSampler(ImportanceFit):  
-    def __init__(self, target, kernel, context=None, ndraws=None, reflect=False,
-                 family='gaussian'):
-        S = Sample(target, kernel, context=context, ndraws=ndraws, reflect=reflect)
-        self._init_from_sample(S, family)
-

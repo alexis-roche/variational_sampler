@@ -22,12 +22,16 @@ vs = np.ones(DIM)
 """
 Create a variational sampler object.
 """
-v = VariationalSampler(target, (ms, vs), family='factor_gaussian',
-                       ndraws=100 * DIM)
+v = VariationalSampler(target, (ms, vs), 100 * DIM)
+
+"""
+Perform fitting.
+"""
+f = v.fit(family='factor_gaussian')
 
 """
 Get the adjusted normalization constant, mean and variance.
 """
-print('Estimated normalizing constant: %f' % v.fit.Z)
-print('Estimated mean: %s' % v.fit.m)
-print('Estimated variance (diagonal): %s' % v.fit.v)
+print('Estimated normalizing constant: %f' % f.fit.Z)
+print('Estimated mean: %s' % f.fit.m)
+print('Estimated variance (diagonal): %s' % f.fit.v)

@@ -6,7 +6,7 @@ from .gaussian import FactorGaussian
 from .gaussian_mixture import GaussianMixture
 from .numlib import safe_exp
 
-class GaussianProcessFit(object):
+class GPFit(object):
 
     def __init__(self, sample, var=1, damping=1e-5):
         """
@@ -17,7 +17,7 @@ class GaussianProcessFit(object):
         
         Parameters
         ----------
-        sample : Sample object
+        sample : VariationalSampler object
           Input sample
         
         var : float or array
@@ -78,10 +78,3 @@ class GaussianProcessFit(object):
     theta = property(_get_theta)
     fit = property(_get_fit)
     loc_fit = property(_get_loc_fit)
-
-
-class GaussianProcessSampler(GaussianProcessFit):    
-    def __init__(self, target, kernel, context=None, ndraws=None, reflect=False,
-                 var=1, damping=1e-5):
-        S = Sample(target, kernel, context=context, ndraws=ndraws, reflect=reflect)
-        self._init_from_sample(S, var, damping)
