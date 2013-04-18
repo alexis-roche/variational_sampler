@@ -2,9 +2,7 @@ import numpy as np
 import pylab as plt
 from scipy.special.orthogonal import h_roots
 
-from variational_sampler.sampling import Sample
-from variational_sampler.variational_sampler import VariationalFit
-from variational_sampler.importance_sampler import ImportanceFit
+from variational_sampler import VariationalSampler
 from _toy_dist import ExponentialPowerLaw
 from _display import display_fit
 
@@ -26,9 +24,9 @@ npts = 10 ** np.arange(1, 6)
 e_vs, e_v0 = [], []
 
 for n in npts:
-    s = Sample(target, (np.zeros(DIM), target.V), ndraws=n)
-    vs = VariationalFit(s)
-    v0 = ImportanceFit(s)
+    s = VariationalSampler(target, (np.zeros(DIM), target.V), n)
+    vs = s.fit('kl')
+    v0 = s.fit('naive_kl')
     e_vs.append(error(vs, kind=KIND))
     e_v0.append(error(v0, kind=KIND))
 

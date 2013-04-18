@@ -25,6 +25,7 @@ def loglikelihood(x, power=1.):
 v = VariationalSampler(loglikelihood, prior,
                        context='kernel',
                        ndraws=1000000)
+f = v.fit()
 
 """
 v2 = VariationalSampler(loglikelihood, prior,
