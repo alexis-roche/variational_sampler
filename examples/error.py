@@ -7,7 +7,7 @@ from _toy_dist import ExponentialPowerLaw
 from _display import display_fit
 
 BETA = 3
-DIM = 2
+DIM = 1
 KIND = 'kl'
 
 def error(v, kind='kl'):
@@ -21,20 +21,20 @@ def error(v, kind='kl'):
 target = ExponentialPowerLaw(beta=BETA, dim=DIM)
 
 npts = 10 ** np.arange(1, 6)
-e_vs, e_v0 = [], []
+e, e0 = [], []
 
 for n in npts:
-    s = VariationalSampler(target, (np.zeros(DIM), target.V), n)
-    vs = s.fit('kl')
-    v0 = s.fit('naive_kl')
-    e_vs.append(error(vs, kind=KIND))
-    e_v0.append(error(v0, kind=KIND))
+    vs = VariationalSampler(target, (np.zeros(DIM), target.V), n)
+    f = vs.fit('kl')
+    f0 = vs.fit('naive_kl')
+    e.append(error(f, kind=KIND))
+    e0.append(error(f0, kind=KIND))
 
-e_vs = np.array(e_vs)
-e_v0 = np.array(e_v0)
+e = np.array(e)
+e0 = np.array(e0)
 
 plt.figure()
-plt.plot(npts, np.log(e_vs))
-plt.plot(npts, np.log(e_v0))
+plt.plot(npts, np.log(e))
+plt.plot(npts, np.log(e0))
 plt.legend(('VS', 'IS'))
 plt.show()

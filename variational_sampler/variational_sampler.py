@@ -11,12 +11,10 @@ from .kl_fit import KLFit
 from .naive_kl_fit import NaiveKLFit
 from .gp_fit import GPFit
 
-"""
-FIXME: reflect wrt the mean, not zero!
-"""
-def reflect_sample(xs):
-    return np.reshape(np.array([xs.T, -xs.T]).T,
-                      [xs.shape[0], 2 * xs.shape[1]])
+
+def reflect_sample(xs, m):
+    return np.reshape(np.array([xs.T, m - xs.T]).T,
+                      (xs.shape[0], 2 * xs.shape[1]))
 
 
 def as_gaussian(g):
@@ -72,8 +70,7 @@ class VariationalSampler(object):
           sample size
 
         reflect: bool
-          if True, symmeterize the sample with respect to the sampling
-          kernel mean
+          if True, reflect the sample about the sampling kernel mean
 
         context: tuple
           a tuple `(m, V)` similar to the kernel argument that defines
@@ -103,7 +100,7 @@ class VariationalSampler(object):
         """
         self.x = self.kernel.sample(ndraws=self.ndraws)
         if self.reflect:
-            self.x = reflect_sample(self.x)
+            self.x = reflect_sample(self.x, self.kernel.m)
         self.log_p, self.target = sample_fun(self.target, self.x)
         if self.context is self.kernel:
             self.log_w = np.zeros(self.log_p.size)
