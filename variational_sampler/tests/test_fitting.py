@@ -3,7 +3,6 @@ from nose.tools import assert_equal
 from numpy.testing import assert_almost_equal, assert_array_almost_equal
 
 from ..variational_sampler import VariationalSampler
-from ..importance_sampler import ImportanceSampler
 from ..gaussian import (Gaussian, FactorGaussian)
 
 
@@ -15,40 +14,44 @@ def target(x):
     return -.5 * np.sum(x ** 2, 0)
 
 
-def _test_basic(vs):
-    print(vs.theta)
-    print(vs.fit)
-    print(vs.loc_fit)
-    print(vs.var_moment)
-    print(vs.fisher_info)
-    print(vs.var_theta)
-    print(vs.kl_error)
+def _test_basic(vs, objective='kl'):
+    f = vs.fit(objective=objective)
+    print(f.theta)
+    print(f.fit)
+    print(f.loc_fit)
+    print(f.var_moment)
+    print(f.fisher_info)
+    print(f.var_theta)
+    print(f.kl_error)
 
 
 def test1d_vs_basic():
-    _test_basic(VariationalSampler(target1d, (0, 1), ndraws=10))
+    _test_basic(VariationalSampler(target1d, (0, 1), 10))
 
 
 def test2d_vs_basic():
-    _test_basic(VariationalSampler(target, (np.zeros(2), np.eye(2)), context='kernel', ndraws=50))
+    _test_basic(VariationalSampler(target, (np.zeros(2), np.eye(2)), 50, context='kernel'))
 
 
-def test1d_cs_basic():
-    _test_basic(ImportanceSampler(target1d, (0, 1), context='kernel', ndraws=10))
+def test1d_is_basic():
+    _test_basic(VariationalSampler(target1d, (0, 1), 10, context='kernel'),
+                objective='naive_kl')
 
 
-def test2d_cs_basic():
-    _test_basic(ImportanceSampler(target, (np.zeros(2), np.eye(2)), context='kernel', ndraws=50))
+def test2d_is_basic():
+    _test_basic(VariationalSampler(target, (np.zeros(2), np.eye(2)), 50, context='kernel'),
+                objective='naive_kl')
 
 
 def test_loss():
-    vs = VariationalSampler(target1d, (0, 1), context='kernel', ndraws=10)
-    vs._cache['qw'][:] = 0
-    vs._cache['log_q'][:] = -np.inf
-    vs._cache['theta'] = None
-    assert_equal(vs._loss(None), np.inf)
-    print(vs._loss(np.array((0, 0, -2500))))
-    print(vs._loss(np.array((0, 0, -1e10))))
+    vs = VariationalSampler(target1d, (0, 1), 10, context='kernel')
+    f = vs.fit()
+    f._cache['qw'][:] = 0
+    f._cache['log_q'][:] = -np.inf
+    f._cache['theta'] = None
+    assert_equal(f._loss(None), np.inf)
+    print(f._loss(np.array((0, 0, -2500))))
+    print(f._loss(np.array((0, 0, -1e10))))
 
 
 def _test_vs_exactness(dim):
@@ -58,10 +61,11 @@ def _test_vs_exactness(dim):
     g = Gaussian(m, V)
     log_g = lambda x: g.log(x)
     ndraws = ((dim + 1) * (dim + 2)) / 2
-    vs = VariationalSampler(log_g, g, ndraws=ndraws)
-    assert_almost_equal(vs.fit.Z, 1, decimal=2)
-    assert_array_almost_equal(vs.fit.m, m, decimal=2)
-    assert_array_almost_equal(vs.fit.V, V, decimal=2)
+    vs = VariationalSampler(log_g, g, ndraws)
+    f = vs.fit()
+    assert_almost_equal(f.fit.Z, 1, decimal=2)
+    assert_array_almost_equal(f.fit.m, m, decimal=2)
+    assert_array_almost_equal(f.fit.V, V, decimal=2)
 
 
 def test_vs_exactness_2d():
@@ -82,11 +86,11 @@ def _test_vs_exactness_factor_gauss(dim):
     g = FactorGaussian(m, v)
     log_g = lambda x: g.log(x)
     ndraws = 2 * dim + 1
-    vs = VariationalSampler(log_g, g, ndraws=ndraws,
-                            family='factor_gaussian')
-    assert_almost_equal(vs.fit.Z, 1, decimal=2)
-    assert_array_almost_equal(vs.fit.m, m, decimal=2)
-    assert_array_almost_equal(vs.fit.v, v, decimal=2)
+    vs = VariationalSampler(log_g, g, ndraws)
+    f = vs.fit(family='factor_gaussian')
+    assert_almost_equal(f.fit.Z, 1, decimal=2)
+    assert_array_almost_equal(f.fit.m, m, decimal=2)
+    assert_array_almost_equal(f.fit.v, v, decimal=2)
 
 
 def test_vs_exactness_factor_gauss_2d():
@@ -102,45 +106,40 @@ def test_vs_exactness_factor_gauss_5d():
 
 
 def test1d_vs_constant_kernel():
-    _test_basic(VariationalSampler(target1d, (1, 2), 
-                                   context=None,
-                                   ndraws=10))
+    _test_basic(VariationalSampler(target1d, (1, 2), 10))
+
 
 def test2d_vs_constant_kernel():
-    _test_basic(VariationalSampler(target, (np.ones(2), 2 * np.eye(2)),
-                                   context=None,
-                                   ndraws=50))
+    _test_basic(VariationalSampler(target, (np.ones(2), 2 * np.eye(2)), 50))
 
 
-def test1d_cs_constant_kernel():
-    _test_basic(ImportanceSampler(target1d, (1, 2),
-                                  context=None,
-                                  ndraws=10))
+def test1d_is_constant_kernel():
+    _test_basic(VariationalSampler(target1d, (1, 2), 10),
+                objective='naive_kl')
 
 
-def test2d_cs_constant_kernel():
-    _test_basic(ImportanceSampler(target, (np.ones(2), 2 * np.eye(2)),
-                                  context=None,
-                                  ndraws=50))
+def test2d_is_constant_kernel():
+    _test_basic(VariationalSampler(target, (np.ones(2), 2 * np.eye(2)), 50),
+                objective='naive_kl')
+
 
 def test1d_vs_custom_kernel():
-    _test_basic(VariationalSampler(target1d, (1, 2), 
-                                   context=(0, 1),
-                                   ndraws=10))
+    _test_basic(VariationalSampler(target1d, (1, 2), 10,
+                                   context=(0, 1)))
+
 
 def test2d_vs_custom_kernel():
-    _test_basic(VariationalSampler(target, (np.ones(2), 2 * np.eye(2)),
-                                   context=(np.zeros(2), np.eye(2)),
-                                   ndraws=50))
+    _test_basic(VariationalSampler(target, (np.ones(2), 2 * np.eye(2)), 50,
+                                   context=(np.zeros(2), np.eye(2))))
 
 
-def test1d_cs_custom_kernel():
-    _test_basic(ImportanceSampler(target1d, (1, 2),
-                                  context=(0, 1),
-                                  ndraws=10))
+def test1d_is_custom_kernel():
+    _test_basic(VariationalSampler(target1d, (1, 2), 10,
+                                   context=(0, 1)),
+                objective='naive_kl')
+                
 
-
-def test2d_cs_custom_kernel():
-    _test_basic(ImportanceSampler(target, (np.ones(2), 2 * np.eye(2)),
-                                  context=(np.zeros(2), np.eye(2)),
-                                  ndraws=50))
+def test2d_is_custom_kernel():
+    _test_basic(VariationalSampler(target, (np.ones(2), 2 * np.eye(2)), 50,
+                                  context=(np.zeros(2), np.eye(2))),
+                objective='naive_kl')

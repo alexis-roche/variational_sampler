@@ -2,7 +2,7 @@ import numpy as np
 from nose.tools import assert_equal, assert_almost_equal
 from numpy.testing import assert_array_equal, assert_array_almost_equal
 
-from ..sampling import Sample
+from ..variational_sampler import VariationalSampler
 
 
 def target1d(x):
@@ -14,21 +14,21 @@ def target(x):
 
 
 def test1d_basic():
-    s = Sample(target1d, (0, 1), ndraws=10)
+    s = VariationalSampler(target1d, (0, 1), 10)
     assert_equal(s.x.size, 10)
 
 
 def test1d_with_reflection():
-    s = Sample(target1d, (0, 1), context='kernel', ndraws=10, reflect=True)
+    s = VariationalSampler(target1d, (0, 1), 10, reflect=True, context='kernel')
     assert_equal(s.x.size, 20)
     assert_almost_equal(s.x.sum(), 0)
 
 
 def test1d_custom_generator():
-    s = Sample(target1d, (1, 2), context=(0, 1), ndraws=10, reflect=True)
+    s = VariationalSampler(target1d, (1, 2), 10, reflect=True, context=(0, 1))
     assert_equal(s.x.size, 20)
 
 
 def test2d_basic():
-    s = Sample(target, (np.zeros(2), np.eye(2)), context='kernel', ndraws=10)
+    s = VariationalSampler(target, (np.zeros(2), np.eye(2)), 10, context='kernel')
     assert_equal(s.x.shape, (2, 10))
