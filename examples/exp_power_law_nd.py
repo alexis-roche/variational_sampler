@@ -15,7 +15,7 @@ h2 = np.diagonal(target.V)
 
 vs = VariationalSampler(target, (np.zeros(DIM), h2), ndraws=NPTS)
 f = vs.fit()
-f0 = vs.fit('naive_kl')
+f0 = vs.fit('l')
 f2 = vs.fit('gp', var=h2)
 gopt = Gaussian(target.m, target.V, Z=target.Z)
 

@@ -26,7 +26,7 @@ h2 = 10 * v
 
 vs = VariationalSampler(target, (0, h2), NPTS, context='kernel')
 f = vs.fit()
-f0 = vs.fit('naive_kl')
+f0 = vs.fit('l')
 f2 = vs.fit('gp', var=v)
 
 gs_glob_fit = gauss_hermite(target, h2, 250)

@@ -8,7 +8,7 @@ import warnings
 from .numlib import force_tiny
 from .gaussian import Gaussian, FactorGaussian
 from .kl_fit import KLFit
-from .naive_kl_fit import NaiveKLFit
+from .l_fit import LFit
 from .gp_fit import GPFit
 
 
@@ -116,12 +116,14 @@ class VariationalSampler(object):
         Parameters
         ----------
         objective: str
-          one of 'kl', 'naive_kl' or 'gp'
+          one of 'kl', 'l' or 'gp' standing for Kullback-Leibler
+          divergence minimization, Likelihood maximization, and
+          Gaussian Process fitting methods, respectively
         """
         if objective == 'kl':
             return KLFit(self, **args)
-        elif objective == 'naive_kl':
-            return NaiveKLFit(self, **args)
+        elif objective == 'l':
+            return LFit(self, **args)
         elif objective == 'gp':
             return GPFit(self, **args)
         else:

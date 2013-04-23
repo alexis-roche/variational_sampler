@@ -25,7 +25,7 @@ Z = np.sqrt((2 * np.pi) ** DIM * np.linalg.det(VAR))
 gopt = Gaussian(MU, VAR, Z=Z)
 vs = VariationalSampler(target, (MU, VAR), ndraws=NPTS)
 f = vs.fit()
-f0 = vs.fit('naive_kl')
+f0 = vs.fit('l')
 
 
 print('Error for VS: %f (expected: %f)'\

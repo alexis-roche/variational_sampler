@@ -11,11 +11,11 @@ families = {'gaussian': GaussianFamily,
             'factor_gaussian': FactorGaussianFamily}
 
 
-class NaiveKLFit(object):
+class LFit(object):
 
     def __init__(self, sample, family='gaussian'):
         """
-        Naive variational sampler object.
+        Importance weighted likelihood fitting method.
         """
         t0 = time()
         self.sample = sample

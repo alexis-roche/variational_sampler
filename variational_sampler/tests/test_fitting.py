@@ -35,12 +35,12 @@ def test2d_vs_basic():
 
 def test1d_is_basic():
     _test_basic(VariationalSampler(target1d, (0, 1), 10, context='kernel'),
-                objective='naive_kl')
+                objective='l')
 
 
 def test2d_is_basic():
     _test_basic(VariationalSampler(target, (np.zeros(2), np.eye(2)), 50, context='kernel'),
-                objective='naive_kl')
+                objective='l')
 
 
 def test_loss():
@@ -115,12 +115,12 @@ def test2d_vs_constant_kernel():
 
 def test1d_is_constant_kernel():
     _test_basic(VariationalSampler(target1d, (1, 2), 10),
-                objective='naive_kl')
+                objective='l')
 
 
 def test2d_is_constant_kernel():
     _test_basic(VariationalSampler(target, (np.ones(2), 2 * np.eye(2)), 50),
-                objective='naive_kl')
+                objective='l')
 
 
 def test1d_vs_custom_kernel():
@@ -136,10 +136,10 @@ def test2d_vs_custom_kernel():
 def test1d_is_custom_kernel():
     _test_basic(VariationalSampler(target1d, (1, 2), 10,
                                    context=(0, 1)),
-                objective='naive_kl')
+                objective='l')
                 
 
 def test2d_is_custom_kernel():
     _test_basic(VariationalSampler(target, (np.ones(2), 2 * np.eye(2)), 50,
                                   context=(np.zeros(2), np.eye(2))),
-                objective='naive_kl')
+                objective='l')

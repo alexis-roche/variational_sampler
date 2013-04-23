@@ -26,7 +26,7 @@ e, e0 = [], []
 for n in npts:
     vs = VariationalSampler(target, (np.zeros(DIM), target.V), n)
     f = vs.fit('kl')
-    f0 = vs.fit('naive_kl')
+    f0 = vs.fit('l')
     e.append(error(f, kind=KIND))
     e0.append(error(f0, kind=KIND))
 
