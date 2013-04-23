@@ -62,7 +62,9 @@ class LFit(object):
         return self._theta
 
     def _get_fit(self):
-        if self._theta is None:
+        if self.sample.context is None:
+            return self._glob_fit
+        elif self._theta is None:
             warn('cannot divide fit with context')
             return None
         return self.family.from_theta(self.theta)
