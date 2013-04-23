@@ -141,6 +141,7 @@ class KLFit(object):
         self.minimizer = m
 
     def _var_moment(self, theta):
+        self._udpate_fit(theta)
         c = self._cache
         return np.dot(c['F'] * ((c['pw'] - c['qw']) ** 2), c['F'].T)\
             * (np.exp(2 * self.logscale) / (self.npts ** 2))
