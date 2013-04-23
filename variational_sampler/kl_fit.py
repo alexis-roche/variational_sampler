@@ -154,7 +154,7 @@ class KLFit(object):
     def _get_fit(self):
         return self.family.from_theta(self.theta)
 
-    def _get_loc_fit(self):
+    def _get_glob_fit(self):
         if self.sample.context is None:
             return self._get_fit()
         elif self.family.check(self.sample.context):
@@ -185,7 +185,7 @@ class KLFit(object):
 
     theta = property(_get_theta)
     fit = property(_get_fit)
-    loc_fit = property(_get_loc_fit)
+    glob_fit = property(_get_glob_fit)
     var_moment = property(_get_var_moment)
     var_theta = property(_get_var_theta)
     fisher_info = property(_get_fisher_info)

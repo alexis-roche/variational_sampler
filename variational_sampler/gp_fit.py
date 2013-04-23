@@ -69,7 +69,7 @@ class GPFit(object):
         gaussians = [FactorGaussian(xi, self._v, K=K) for xi in x.T]
         return GaussianMixture(self._theta, gaussians)
 
-    def _get_loc_fit(self):
+    def _get_glob_fit(self):
         x = self.sample.x
         K = np.exp(self.logscale)
         gaussians = [self.sample.context * FactorGaussian(xi, self._v, K=K) for xi in x.T]
@@ -77,4 +77,4 @@ class GPFit(object):
 
     theta = property(_get_theta)
     fit = property(_get_fit)
-    loc_fit = property(_get_loc_fit)
+    glob_fit = property(_get_glob_fit)

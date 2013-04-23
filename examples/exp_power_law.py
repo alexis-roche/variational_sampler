@@ -29,15 +29,15 @@ f = vs.fit()
 f0 = vs.fit('naive_kl')
 f2 = vs.fit('gp', var=v)
 
-gs_loc_fit = gauss_hermite(target, h2, 250)
-gh_loc_fit = gauss_hermite(target, h2, NPTS)
+gs_glob_fit = gauss_hermite(target, h2, 250)
+gh_glob_fit = gauss_hermite(target, h2, NPTS)
 
 print('Error for VS: %f (expected: %f)'\
-          % (gs_loc_fit.kl_div(f.loc_fit), f.kl_error))
+          % (gs_glob_fit.kl_div(f.glob_fit), f.kl_error))
 print('Error for IS: %f (expected: %f)'\
-           % (gs_loc_fit.kl_div(f0.loc_fit), f0.kl_error))
-print('Error for BMC: %f'% gs_loc_fit.kl_div(f2.loc_fit))
-print('Error for GH: %f' % gs_loc_fit.kl_div(gh_loc_fit))
+           % (gs_glob_fit.kl_div(f0.glob_fit), f0.kl_error))
+print('Error for BMC: %f'% gs_glob_fit.kl_div(f2.glob_fit))
+print('Error for GH: %f' % gs_glob_fit.kl_div(gh_glob_fit))
 
 
 acronyms = ('VS', 'IS', 'BMC')

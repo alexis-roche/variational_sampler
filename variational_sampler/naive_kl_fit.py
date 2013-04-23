@@ -36,9 +36,9 @@ class NaiveKLFit(object):
         F = self._cache['F']
         pw, self.logscale = safe_exp(self.sample.log_p + self.sample.log_w)
         moment = np.dot(F, pw) / self.npts
-        self._loc_fit = self.family.from_moment(moment)
+        self._glob_fit = self.family.from_moment(moment)
         scale = np.exp(self.logscale)
-        self._loc_fit.rescale(scale)
+        self._glob_fit.rescale(scale)
         self._set_theta()
 
         # Compute variance on moment estimate
@@ -48,12 +48,12 @@ class NaiveKLFit(object):
 
     def _set_theta(self):
         if self.sample.context is None:
-            self._theta = self._loc_fit.theta
+            self._theta = self._glob_fit.theta
         elif self.family.check(self.sample.context):
-            self._theta = self._loc_fit.theta - self.sample.context.theta
+            self._theta = self._glob_fit.theta - self.sample.context.theta
         else:
             try:
-                fit = self._loc_fit / self.sample.context
+                fit = self._glob_fit / self.sample.context
                 self._theta = fit.theta
             except:
                 self._theta = None
@@ -67,8 +67,8 @@ class NaiveKLFit(object):
             return None
         return self.family.from_theta(self.theta)
 
-    def _get_loc_fit(self):
-        return self._loc_fit
+    def _get_glob_fit(self):
+        return self._glob_fit
 
     def _get_var_moment(self):
         return self._var_moment
@@ -88,7 +88,7 @@ class NaiveKLFit(object):
 
     theta = property(_get_theta)
     fit = property(_get_fit)
-    loc_fit = property(_get_loc_fit)
+    glob_fit = property(_get_glob_fit)
     var_moment = property(_get_var_moment)
     var_theta = property(_get_var_theta)
     fisher_info = property(_get_fisher_info)
