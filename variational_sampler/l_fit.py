@@ -36,6 +36,8 @@ class LFit(object):
         F = self._cache['F']
         pw, self.logscale = safe_exp(self.sample.log_p + self.sample.log_w)
         moment = np.dot(F, pw) / self.npts
+        # Cache moment for extrinsic use
+        self._cache['moment'] = moment
         self._glob_fit = self.family.from_moment(moment)
         scale = np.exp(self.logscale)
         self._glob_fit.rescale(scale)

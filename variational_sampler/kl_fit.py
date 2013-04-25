@@ -5,6 +5,7 @@ import numpy as np
 from .numlib import safe_exp, inv_sym_matrix, min_methods
 from .gaussian import GaussianFamily, FactorGaussianFamily
 
+VERBOSE = False
 
 families = {'gaussian': GaussianFamily,
             'factor_gaussian': FactorGaussianFamily}
@@ -128,15 +129,19 @@ class KLFit(object):
         if meth in ('newton', 'ncg'):
             m = min_methods[meth](theta, self._loss, self._gradient,
                                   self._hessian,
-                                  maxiter=self.maxiter, tol=self.tol)
+                                  maxiter=self.maxiter, tol=self.tol,
+                                  verbose=VERBOSE)
         elif meth in ('quasi_newton',):
             m = min_methods[meth](theta, self._loss, self._gradient,
                                   self._pseudo_hessian(),
-                                  maxiter=self.maxiter, tol=self.tol)
+                                  maxiter=self.maxiter, tol=self.tol,
+                                  verbose=VERBOSE)
         else:
             m = min_methods[meth](theta, self._loss, self._gradient,
-                                  maxiter=self.maxiter, tol=self.tol)
-        m.message()
+                                  maxiter=self.maxiter, tol=self.tol,
+                                  verbose=VERBOSE)
+        if VERBOSE:
+            m.message()
         self._theta = m.argmin()
         self.minimizer = m
 

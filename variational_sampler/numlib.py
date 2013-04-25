@@ -40,11 +40,11 @@ def inv_sym_matrix(A):
 
 class SteepestDescent(object):
 
-    def __init__(self, x, f, grad_f, maxiter=None, tol=1e-7):
-        self._generic_init(x, f, grad_f, maxiter, tol)
+    def __init__(self, x, f, grad_f, maxiter=None, tol=1e-7, verbose=False):
+        self._generic_init(x, f, grad_f, maxiter, tol, verbose)
         self.run()
 
-    def _generic_init(self, x, f, grad_f, maxiter, tol):
+    def _generic_init(self, x, f, grad_f, maxiter, tol, verbose):
         self.x = np.asarray(x).ravel()
         self.f = f
         self.grad_f = grad_f
@@ -57,6 +57,7 @@ class SteepestDescent(object):
         self.iter = 0
         self.nevals = 1
         self.a = 1
+        self.verbose = verbose
 
     def direction(self):
         return np.nan_to_num(-self.grad_f(self.x))
@@ -92,7 +93,8 @@ class SteepestDescent(object):
 
             # Termination test
             self.iter += 1
-            print ('Iter:%d, f=%f, a=%f' % (self.iter, self.fval, self.a))
+            if self.verbose:
+                print ('Iter:%d, f=%f, a=%f' % (self.iter, self.fval, self.a))
             if self.iter > self.maxiter or stuck:
                 break
 
@@ -110,8 +112,8 @@ class SteepestDescent(object):
 
 class ConjugateDescent(SteepestDescent):
 
-    def __init__(self, x, f, grad_f, maxiter=None, tol=1e-7):
-        self._generic_init(x, f, grad_f, maxiter, tol)
+    def __init__(self, x, f, grad_f, maxiter=None, tol=1e-7, verbose=False):
+        self._generic_init(x, f, grad_f, maxiter, tol, verbose)
         self.prev_dx = None
         self.prev_g = None
         self.run()
@@ -136,8 +138,8 @@ class ConjugateDescent(SteepestDescent):
 
 class NewtonDescent(SteepestDescent):
 
-    def __init__(self, x, f, grad_f, hess_f, maxiter=None, tol=1e-7):
-        self._generic_init(x, f, grad_f, maxiter, tol)
+    def __init__(self, x, f, grad_f, hess_f, maxiter=None, tol=1e-7, verbose=False):
+        self._generic_init(x, f, grad_f, maxiter, tol, verbose)
         self.hess_f = hess_f
         self.run()
         
@@ -163,8 +165,8 @@ class NewtonDescent(SteepestDescent):
 
 class QuasiNewtonDescent(SteepestDescent):
 
-    def __init__(self, x, f, grad_f, fix_hess_f, maxiter=None, tol=1e-7):
-        self._generic_init(x, f, grad_f, maxiter, tol)
+    def __init__(self, x, f, grad_f, fix_hess_f, maxiter=None, tol=1e-7, verbose=False):
+        self._generic_init(x, f, grad_f, maxiter, tol, verbose)
         self.Hinv = inv_sym_matrix(fix_hess_f)
         self.run()
     
@@ -176,11 +178,11 @@ class QuasiNewtonDescent(SteepestDescent):
 
 class ScipyCG(object):
 
-    def __init__(self, x, f, grad_f, maxiter=None, tol=1e-7):
+    def __init__(self, x, f, grad_f, maxiter=None, tol=1e-7, verbose=False):
         t0 = time()
         stuff = fmin_cg(f, x, fprime=grad_f, args=(),
                         maxiter=maxiter, gtol=tol,
-                        full_output=True)
+                        full_output=True, disp=verbose)
         self.x, self.fval = stuff[0], stuff[1]
         self.time = time() - t0
 
@@ -193,11 +195,11 @@ class ScipyCG(object):
 
 class ScipyNCG(object):
 
-    def __init__(self, x, f, grad_f, hess_f, maxiter=None, tol=1e-7):
+    def __init__(self, x, f, grad_f, hess_f, maxiter=None, tol=1e-7, verbose=False):
         t0 = time()
         stuff = fmin_ncg(f, x, grad_f, fhess=hess_f, args=(),
                          maxiter=maxiter, avextol=tol,
-                         full_output=True)
+                         full_output=True, disp=verbose)
         self.x, self.fval = stuff[0], stuff[1]
         self.time = time() - t0
 
@@ -210,11 +212,11 @@ class ScipyNCG(object):
 
 class ScipyBFGS(object):
 
-    def __init__(self, x, f, grad_f, maxiter=None, tol=1e-7):
+    def __init__(self, x, f, grad_f, maxiter=None, tol=1e-7, verbose=False):
         t0 = time()
         stuff = fmin_bfgs(f, x, fprime=grad_f, args=(),
                           maxiter=maxiter, gtol=tol,
-                          full_output=True)
+                          full_output=True, disp=verbose)
         self.x, self.fval = stuff[0], stuff[1]
         self.time = time() - t0
 
