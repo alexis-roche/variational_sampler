@@ -38,6 +38,8 @@ class KLFit(object):
         if family not in families.keys():
             raise ValueError('unknown family')
         self.family = families[family](self.dim)
+
+        # Pre-compute some stuff and cache it
         pw, self.logscale = safe_exp(self.sample.log_p + self.sample.log_w)
         self._cache = {
             'theta': None,
@@ -57,7 +59,7 @@ class KLFit(object):
         else:
             self._theta_init = np.asarray(theta)
 
-        # Perform fitting
+        # Perform fit
         self.minimizer = minimizer
         self.tol = tol
         self.maxiter = maxiter
