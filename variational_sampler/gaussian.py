@@ -119,7 +119,7 @@ class Gaussian(object):
 
     def _set_theta(self, theta):
         """
-        Convert new theta back into K, m, V
+        Convert theta to K, m, V
         """
         theta = np.asarray(theta)
         dim = _sample_dim(theta.size)
