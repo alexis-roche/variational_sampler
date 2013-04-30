@@ -13,13 +13,22 @@ REPEATS = 200
 TARGET = ExponentialPowerLaw(beta=BETA, dim=DIM)
 H2 = SCALING * np.diagonal(TARGET.V)
 GS_FIT = Gaussian(TARGET.m, TARGET.V, Z=TARGET.Z)
-mahalanobis = lambda f: np.sum(f.m * np.dot(np.linalg.inv(f.V), f.m))
 
+METHODS = {
+    'l': {},
+    'kl': {'minimizer': 'quasi_newton'},
+    'gp': {'var': .1 * np.mean(H2)}
+}
+METHODS = {
+    'l': {},
+    'kl': {'minimizer': 'quasi_newton'}
+}
+
+mahalanobis = lambda f: np.sum(f.m * np.dot(np.linalg.inv(f.V), f.m))
 MEASURES = lambda f: f.Z,\
-    lambda f: (f.Z - TARGET.Z) ** 2,\
+    lambda f: f.Z - TARGET.Z,\
     lambda f: mahalanobis(f),\
     lambda f: GS_FIT.kl_div(f)
-
 get_measures = lambda f: np.array([m(f) for m in MEASURES])
 
 def display(durations, measures, robust=False):
@@ -31,30 +40,27 @@ def display(durations, measures, robust=False):
         std = lambda x: np.std(x, 1)
     for k in range(len(MEASURES)):
         plt.figure()
-        plt.errorbar(NDRAWS, mu(measures['l'][k]), std(measures['l'][k]), fmt='o-', color='orange')
-        plt.errorbar(NDRAWS, mu(measures['kl'][k]), std(measures['kl'][k]), fmt='o-', color='red')
+        for m in METHODS.keys():
+            """plt.errorbar(NDRAWS, mu(measures[m][k]), std(measures[m][k]), fmt='o-')
+            """
+            plt.errorbar(mu(durations[m]), mu(measures[m][k]), std(measures[m][k]), fmt='o-')
+        plt.legend(METHODS.keys(), loc=0)
     plt.show()
 
-durations = {
-    'l': np.zeros((len(NDRAWS), REPEATS)),
-    'kl': np.zeros((len(NDRAWS), REPEATS))
-}
-measures = {
-    'l': np.zeros((len(MEASURES), len(NDRAWS), REPEATS)),
-    'kl': np.zeros((len(MEASURES), len(NDRAWS), REPEATS))
-}
+durations = {}
+measures = {}
+for m in METHODS.keys():
+    durations[m] = np.zeros((len(NDRAWS), REPEATS))
+    measures[m] = np.zeros((len(MEASURES), len(NDRAWS), REPEATS))
 
 for i in range(len(NDRAWS)):
     ndraws = NDRAWS[i]
     for r in range(REPEATS):
         vs = VariationalSampler(TARGET, (np.zeros(DIM), H2), ndraws=ndraws)
-        f = vs.fit('l')
-        durations['l'][i, r] = vs.sampling_time + f.time
-        measures['l'][:, i, r] = get_measures(f.fit)
-        #f = vs.fit('kl', family='factor_gaussian')
-        f = vs.fit('kl', minimizer='quasi_newton')
-        durations['kl'][i, r] = vs.sampling_time + f.time
-        measures['kl'][:, i, r] = get_measures(f.fit)
-    
+        for m in METHODS.keys():
+            print(m)
+            f = vs.fit(m, **METHODS[m])
+            durations[m][i, r] = vs.sampling_time + f.time
+            measures[m][:, i, r] = get_measures(f.fit)
 
 
