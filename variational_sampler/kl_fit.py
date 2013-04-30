@@ -12,7 +12,7 @@ families = {'gaussian': GaussianFamily,
 
 
 class KLFit(object):
-    
+
     def __init__(self, sample, family='gaussian', tol=1e-5, maxiter=None,
                  minimizer='newton', theta=None):
         """

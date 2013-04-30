@@ -21,7 +21,7 @@ class LFit(object):
         self.sample = sample
         self.dim = sample.x.shape[0]
         self.npts = sample.x.shape[1]
-        
+
         # Instantiate fitting family
         if family not in families.keys():
             raise ValueError('unknown family')

@@ -146,7 +146,7 @@ class Gaussian(object):
     def log(self, xs):
         return np.log(self._K) - .5 * self.mahalanobis(xs)
 
-    def __call__(self, xs, log=True):
+    def __call__(self, xs):
         """
         Evaluate the Gaussian at specified points.
         xs must have shape (dim, npts)

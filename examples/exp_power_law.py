@@ -7,45 +7,57 @@ from variational_sampler.gaussian import Gaussian
 from _toy_dist import ExponentialPowerLaw
 from _display import display_fit
 
-BETA = 3
-NPTS = 10
+BETA = 2
+NPTS = 5
+DV = 4
+DM = -2
 
-def gauss_hermite(target, h2, npts):
-    p = lambda x: np.exp(target(x))
+
+def gauss_hermite_rule(npts, mk, vk):
+    """
+    Compute the points and weights for the Gauss-Hermite quadrature
+    with the normalized Gaussian N(0, h2) as a weighting function.
+    """
     x, w = h_roots(npts)
-    x = x.real * np.sqrt(2 * h2)
-    c = 1 / np.sqrt(np.pi)
-    Z = c * np.sum(w * p(x))
-    m = c * np.sum(w * x * p(x)) / Z
-    V = c * np.sum(w * (x ** 2) * p(x)) / Z - m ** 2
-    return Gaussian(m, V, Z=Z)
+    x *= np.sqrt(2 * vk)
+    x += mk
+    w /= np.sqrt(np.pi)
+    return x, w
+
 
 target = ExponentialPowerLaw(beta=BETA)
-v = target.V
-h2 = 10 * v
+v = float(target.V)
+mk = target.m + DM
+vk = DV * v
 
-vs = VariationalSampler(target, (0, h2), NPTS, context='kernel')
-f = vs.fit()
-f0 = vs.fit('l')
-f2 = vs.fit('gp', var=v)
+gs_fit = Gaussian(target.m, target.V, Z=target.Z)
 
-gs_glob_fit = gauss_hermite(target, h2, 250)
-gh_glob_fit = gauss_hermite(target, h2, NPTS)
+# Random sampling approach
+vs = VariationalSampler(target, (mk, vk), NPTS)
+f_kl = vs.fit()
+f_l = vs.fit('l')
+f_gp = vs.fit('gp', var=v)
+
+# Deterministic sampling approch (tweak a vs object)
+x, w = gauss_hermite_rule(NPTS, mk, vk)
+vsd = VariationalSampler(target, (mk, vk), NPTS, x=x, w=w)
+fd_kl = vsd.fit()
+fd_l = vsd.fit('l')
+fd_gp = vsd.fit('gp', var=v)
+
 
 print('Error for VS: %f (expected: %f)'\
-          % (gs_glob_fit.kl_div(f.glob_fit), f.kl_error))
+          % (gs_fit.kl_div(f_kl.fit), f_kl.kl_error))
 print('Error for IS: %f (expected: %f)'\
-           % (gs_glob_fit.kl_div(f0.glob_fit), f0.kl_error))
-print('Error for BMC: %f'% gs_glob_fit.kl_div(f2.glob_fit))
-print('Error for GH: %f' % gs_glob_fit.kl_div(gh_glob_fit))
-
+           % (gs_fit.kl_div(f_l.fit), f_l.kl_error))
+print('Error for BMC: %f' % gs_fit.kl_div(f_gp.fit))
+print('Error for GH: %f' % gs_fit.kl_div(fd_l.fit))
+print('Error for VSd: %f' % gs_fit.kl_div(fd_kl.fit))
+print('Error for GP: %f' % gs_fit.kl_div(fd_gp.fit))
 
 acronyms = ('VS', 'IS', 'BMC')
 colors = ('blue', 'orange', 'green')
 plt.figure()
-display_fit(vs, target, (f, f0, f2), colors, acronyms)
-plt.title('factor fits')
+display_fit(vs.x, target, (f_kl, f_l, f_gp), colors, ('VS', 'IS', 'BMC'))
 plt.figure()
-display_fit(vs, target, (f, f0, f2), colors, acronyms, glob=True)
-plt.title('global fits')
-plt.show()
+display_fit(vsd.x, target, (fd_kl, fd_l, fd_gp), colors, ('VS', 'GH', 'GP'))

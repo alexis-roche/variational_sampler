@@ -3,9 +3,7 @@ Variational sampling
 """
 from time import time
 import numpy as np
-import warnings
 
-from .numlib import force_tiny
 from .gaussian import Gaussian, FactorGaussian
 from .kl_fit import KLFit
 from .l_fit import LFit
@@ -47,7 +45,7 @@ def sample_fun(f, x):
 class VariationalSampler(object):
 
     def __init__(self, target, kernel, ndraws, reflect=False,
-                 context=None):
+                 context=None, x=None, w=None):
         """
         Variational sampler class.
 
@@ -89,16 +87,20 @@ class VariationalSampler(object):
         self.reflect = reflect
 
         # Sample random points
+        self.x, self.w = x, w
         t0 = time()
         self._sample()
         self.sampling_time = time() - t0
 
-    def _sample(self):
+    def _sample(self, x=None, w=None):
         """
         Sample independent points from the specified kernel and
         compute associated distribution values.
         """
-        self.x = self.kernel.sample(ndraws=self.ndraws)
+        if self.x == None:
+            self.x = self.kernel.sample(ndraws=self.ndraws)
+        else:
+            self.x = np.reshape(self.x, (self.kernel.dim, len(self.x)))
         if self.reflect:
             self.x = reflect_sample(self.x, self.kernel.m)
         self.log_p, self.target = sample_fun(self.target, self.x)
@@ -108,11 +110,17 @@ class VariationalSampler(object):
             self.log_w = -self.kernel.log(self.x)
         else:
             self.log_w = self.context.log(self.x) - self.kernel.log(self.x)
+        # the input weights are assumed to come from a quadrature
+        # rule, so they need be multiplied by the number of points for
+        # consistency with the random case where the weighted sum
+        # approximates npts times the integral
+        if not self.w == None:
+            self.log_w += np.log(self.w) + np.log(len(self.w))
 
     def fit(self, objective='kl', **args):
         """
         Perform fitting.
-        
+
         Parameters
         ----------
         objective: str
@@ -128,4 +136,3 @@ class VariationalSampler(object):
             return GPFit(self, **args)
         else:
             raise ValueError('unknown objective')
-        
