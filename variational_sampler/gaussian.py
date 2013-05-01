@@ -168,7 +168,7 @@ class Gaussian(object):
             return self.__class__(theta=self.theta - other.embed().theta)
         else:
             raise ValueError('unsupported division')
-        
+
     def __pow__(self, power):
         return self.__class__(theta=power * self.theta)
 
@@ -302,7 +302,7 @@ class FactorGaussian(object):
             xs = np.reshape(xs, (1, xs.size))
         ys = (xs.T - self._m).T
         return np.sum(self._invv * (ys ** 2).T, 1)
-    
+
     def log(self, xs):
         return np.log(self._K) - .5 * self.mahalanobis(xs)
 

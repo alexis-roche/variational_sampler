@@ -157,7 +157,13 @@ class KLFit(object):
         return theta
 
     def _get_fit(self):
-        return self.family.from_theta(self.sample.kernel.theta + self.theta)
+        if self.family.check(self.sample.kernel):
+            return self.family.from_theta(self.theta + self.sample.kernel.theta)
+        elif len(self.sample.kernel.theta) < len(self.theta):
+            kernel = self.sample.kernel.embed()
+            return self.family.from_theta(kernel.theta + self.theta)
+        else:
+            return self.family.from_theta(self.theta) * self.sample.kernel
 
     def _get_var_moment(self):
         return self._var_moment(self._theta)

@@ -39,25 +39,28 @@ f_l = vs.fit('l')
 f_gp = vs.fit('gp', var=v)
 
 # Deterministic sampling approch (tweak a vs object)
-x, w = gauss_hermite_rule(NPTS, mk, vk)
+"""x, w = gauss_hermite_rule(NPTS, mk, vk)
 vsd = VariationalSampler(target, (mk, vk), NPTS, x=x, w=w)
 fd_kl = vsd.fit()
 fd_l = vsd.fit('l')
 fd_gp = vsd.fit('gp', var=v)
-
+"""
 
 print('Error for VS: %f (expected: %f)'\
           % (gs_fit.kl_div(f_kl.fit), f_kl.kl_error))
 print('Error for IS: %f (expected: %f)'\
            % (gs_fit.kl_div(f_l.fit), f_l.kl_error))
 print('Error for BMC: %f' % gs_fit.kl_div(f_gp.fit))
-print('Error for GH: %f' % gs_fit.kl_div(fd_l.fit))
+
+"""print('Error for GH: %f' % gs_fit.kl_div(fd_l.fit))
 print('Error for VSd: %f' % gs_fit.kl_div(fd_kl.fit))
 print('Error for GP: %f' % gs_fit.kl_div(fd_gp.fit))
+"""
 
 acronyms = ('VS', 'IS', 'BMC')
 colors = ('blue', 'orange', 'green')
 plt.figure()
 display_fit(vs.x, target, (f_kl, f_l, f_gp), colors, ('VS', 'IS', 'BMC'))
 plt.figure()
-display_fit(vsd.x, target, (fd_kl, fd_l, fd_gp), colors, ('VS', 'GH', 'GP'))
+"""display_fit(vsd.x, target, (fd_kl, fd_l, fd_gp), colors, ('VS', 'GH', 'GP'))
+"""

@@ -1,12 +1,11 @@
 import numpy as np
-import pylab as plt
 from variational_sampler import VariationalSampler
 from variational_sampler.gaussian import Gaussian
 from _toy_dist import ExponentialPowerLaw
 
 
-BETA = 5
-DIM = 20
+BETA = 3
+DIM = 5
 NPTS = 10 * DIM ** 2
 
 target = ExponentialPowerLaw(beta=BETA, dim=DIM)
@@ -23,4 +22,4 @@ print('Error for VS: %f (expected: %f)'\
           % (gopt.kl_div(f.fit), f.kl_error))
 print('Error for IS: %f (expected: %f)'\
            % (gopt.kl_div(f0.fit), f0.kl_error))
-print('Error for BMC: %f'% gopt.kl_div(f2.fit))
+print('Error for BMC: %f' % gopt.kl_div(f2.fit))
