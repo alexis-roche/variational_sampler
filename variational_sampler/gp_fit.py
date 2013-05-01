@@ -4,7 +4,7 @@ from scipy.linalg import cho_factor, cho_solve
 
 from .gaussian import FactorGaussian
 from .gaussian_mixture import GaussianMixture
-from .numlib import safe_exp
+
 
 class GPFit(object):
 
@@ -12,14 +12,14 @@ class GPFit(object):
         """
         Bayesian quadrature using Gaussian kernels (Bayesian Monte
         Carlo method).
-        
+
         p / pi approx Gauss mixture
-        
+
         Parameters
         ----------
         sample : VariationalSampler object
           Input sample
-        
+
         var : float or array
           Isotropic or component-wise squared kernel size
 
@@ -45,7 +45,7 @@ class GPFit(object):
         self.damping = float(damping)
         self._do_fitting()
         self.time = time() - t0
-        
+
     def _do_fitting(self):
         # Assemble covariance matrix
         x = self.sample.x
@@ -57,24 +57,16 @@ class GPFit(object):
 
         # Solve for the spline coefficients and compute model evidence
         L, lower = cho_factor(G, lower=0)
-        p, self.logscale = safe_exp(self.sample.log_p)
-        self._theta = cho_solve((L, 0), p)
+        self._theta = cho_solve((L, 0), self.sample.pe)
 
     def _get_theta(self):
         return self._theta
 
     def _get_fit(self):
         x = self.sample.x
-        K = np.exp(self.logscale)
-        gaussians = [FactorGaussian(xi, self._v, K=K) for xi in x.T]
-        return GaussianMixture(self._theta, gaussians)
-
-    def _get_glob_fit(self):
-        x = self.sample.x
-        K = np.exp(self.logscale)
-        gaussians = [self.sample.context * FactorGaussian(xi, self._v, K=K) for xi in x.T]
+        K = np.exp(self.sample.logscale)
+        gaussians = [self.sample.kernel * FactorGaussian(xi, self._v, K=K) for xi in x.T]
         return GaussianMixture(self._theta, gaussians)
 
     theta = property(_get_theta)
     fit = property(_get_fit)
-    glob_fit = property(_get_glob_fit)

@@ -45,8 +45,8 @@ def test2d_is_basic():
 def test_loss():
     vs = VariationalSampler(target1d, (0, 1), 10)
     f = vs.fit()
-    f._cache['qw'][:] = 0
-    f._cache['log_qw'][:] = -np.inf
+    f._cache['qe'][:] = 0
+    f._cache['log_qe'][:] = -np.inf
     f._cache['theta'] = None
     assert_equal(f._loss(None), np.inf)
     print(f._loss(np.array((0, 0, -2500))))

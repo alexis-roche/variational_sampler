@@ -1,8 +1,7 @@
 from time import time
-from warnings import warn
 import numpy as np
 
-from .numlib import safe_exp, inv_sym_matrix, min_methods
+from .numlib import inv_sym_matrix, min_methods
 from .gaussian import GaussianFamily, FactorGaussianFamily
 
 VERBOSE = True
@@ -40,22 +39,17 @@ class KLFit(object):
         self.family = families[family](self.dim)
 
         # Pre-compute some stuff and cache it
-        log_pw = self.sample.log_p + self.sample.log_w
-        pw, self.logscale = safe_exp(log_pw)
-        log_pw -= self.logscale
         self._cache = {
             'theta': None,
             'F': self.family.design_matrix(sample.x),
-            'pw': pw,
-            'log_pw': log_pw,
-            'qw': None,
-            'log_qw': None
+            'qe': None,
+            'log_qe': None
             }
 
         # Initial guess for theta parameter (default is optimal constant fit)
         if theta is None:
             self._theta_init = np.zeros(self._cache['F'].shape[0])
-            self._theta_init[0] = np.log(np.mean(self._cache['pw']))
+            self._theta_init[0] = np.log(np.mean(self.sample.pe))
         else:
             self._theta_init = np.asarray(theta)
 
@@ -72,10 +66,10 @@ class KLFit(object):
         """
         c = self._cache
         if not theta is c['theta']:
-            c['log_qw'] = np.dot(c['F'].T, theta)
-            c['qw'] = np.exp(c['log_qw'])
+            c['log_qe'] = np.dot(c['F'].T, theta)
+            c['qe'] = np.exp(c['log_qe'])
             c['theta'] = theta
-            fail = np.isinf(c['log_qw']).max() or np.isinf(c['qw']).max()
+            fail = np.isinf(c['log_qe']).max() or np.isinf(c['qe']).max()
         else:
             fail = False
         return not fail
@@ -84,17 +78,17 @@ class KLFit(object):
         """
         Compute the empirical divergence:
 
-          sum[pw * log pw/qw + qw - pw],
+          sum[pe * log pe/qe + qe - pe],
 
         where:
-          pw is the target distribution
-          qw is the parametric fit
+          pe is the target distribution
+          qe is the parametric fit
         """
         if not self._udpate_fit(theta):
             return np.inf
         c = self._cache
-        return np.sum(c['pw'] * (c['log_pw'] - c['log_qw'])
-                      + c['qw'] - c['pw'])
+        return np.sum(self.sample.pe * (self.sample.log_pe - c['log_qe'])
+                      + c['qe'] - self.sample.pe)
 
     def _gradient(self, theta):
         """
@@ -102,7 +96,7 @@ class KLFit(object):
         """
         self._udpate_fit(theta)
         c = self._cache
-        return np.dot(c['F'], c['qw'] - c['pw'])
+        return np.dot(c['F'], c['qe'] - self.sample.pe)
 
     def _hessian(self, theta):
         """
@@ -110,7 +104,7 @@ class KLFit(object):
         """
         self._udpate_fit(theta)
         c = self._cache
-        return np.dot(c['F'] * c['qw'], c['F'].T)
+        return np.dot(c['F'] * c['qe'], c['F'].T)
 
     def _pseudo_hessian(self):
         """
@@ -118,7 +112,7 @@ class KLFit(object):
         fitted distribution with the target distribution.
         """
         c = self._cache
-        return np.dot(c['F'] * c['pw'], c['F'].T)
+        return np.dot(c['F'] * self.sample.pe, c['F'].T)
 
     def _do_fitting(self):
         """
@@ -150,19 +144,26 @@ class KLFit(object):
     def _var_moment(self, theta):
         self._udpate_fit(theta)
         c = self._cache
-        return np.dot(c['F'] * ((c['pw'] - c['qw']) ** 2), c['F'].T)\
-            * (np.exp(2 * self.logscale) / (self.npts ** 2))
+        return np.dot(c['F'] * ((self.sample.pe - c['qe']) ** 2), c['F'].T)\
+            * (np.exp(2 * self.sample.logscale) / (self.npts ** 2))
 
     def _fisher_info(self, theta):
-        return self._hessian(self._theta) * (np.exp(self.logscale) / self.npts)
+        return self._hessian(self._theta)\
+            * (np.exp(self.sample.logscale) / self.npts)
 
     def _get_theta(self):
         theta = self._theta.copy()
-        theta[0] += self.logscale
+        theta[0] += self.sample.logscale
         return theta
 
     def _get_fit(self):
-        return self.family.from_theta(self.sample.kernel.theta + self.theta)
+        if self.family.check(self.sample.kernel):
+            return self.family.from_theta(self.theta + self.sample.kernel.theta)
+        elif len(self.sample.kernel.theta) < len(self.theta):
+            kernel = self.sample.kernel.embed()
+            return self.family.from_theta(kernel.theta + self.theta)
+        else:
+            return self.family.from_theta(self.theta) * self.sample.kernel
 
     def _get_var_moment(self):
         return self._var_moment(self._theta)
