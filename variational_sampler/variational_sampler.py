@@ -45,7 +45,7 @@ def sample_fun(f, x):
 class VariationalSampler(object):
 
     def __init__(self, target, kernel, ndraws, reflect=False,
-                 context=None, x=None, w=None):
+                 x=None, w=None):
         """
         Variational sampler class.
 
@@ -69,20 +69,9 @@ class VariationalSampler(object):
 
         reflect: bool
           if True, reflect the sample about the sampling kernel mean
-
-        context: tuple
-          a tuple `(m, V)` similar to the kernel argument that defines
-          the local KL divergence used as a fitting objective. If
-          None, the global KL divergence is used.
         """
         self.kernel = as_gaussian(kernel)
         self.target = target
-        if context is None:
-            self.context = None
-        elif context == 'kernel':
-            self.context = self.kernel
-        else:
-            self.context = as_gaussian(context)
         self.ndraws = ndraws
         self.reflect = reflect
 
@@ -104,12 +93,7 @@ class VariationalSampler(object):
         if self.reflect:
             self.x = reflect_sample(self.x, self.kernel.m)
         self.log_p, self.target = sample_fun(self.target, self.x)
-        if self.context is self.kernel:
-            self.log_w = np.zeros(self.log_p.size)
-        elif self.context is None:
-            self.log_w = -self.kernel.log(self.x)
-        else:
-            self.log_w = self.context.log(self.x) - self.kernel.log(self.x)
+        self.log_w = -self.kernel.log(self.x)
         # the input weights are assumed to come from a quadrature
         # rule, so they need be multiplied by the number of points for
         # consistency with the random case where the weighted sum
