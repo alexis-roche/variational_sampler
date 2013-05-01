@@ -214,7 +214,6 @@ class Gaussian(object):
     theta = property(_get_theta, _set_theta)
 
 
-
 class FactorGaussian(object):
 
     def __init__(self, m=None, V=None, K=None, Z=None, theta=None):
@@ -248,7 +247,7 @@ class FactorGaussian(object):
             if Z == None:
                 Z = 1.0
             self._K = Z_to_K(Z, self._dim, self._detV)
-        
+
     def _get_dim(self):
         return self._dim
 
@@ -314,7 +313,8 @@ class FactorGaussian(object):
         return self._K * np.exp(-.5 * self.mahalanobis(xs))
 
     def sample(self, ndraws=1):
-        xs = (np.sqrt(np.abs(self._v)) * np.random.normal(size=(self._dim, ndraws)).T).T
+        xs = (np.sqrt(np.abs(self._v)) * \
+                  np.random.normal(size=(self._dim, ndraws)).T).T
         return (self._m + xs.T).T  # preserves shape
 
     def __str__(self):
@@ -341,7 +341,7 @@ class FactorGaussian(object):
     def __div__(self, other):
         if isinstance(other, self.__class__):
             return self.__class__(theta=self.theta - other.theta)
-        elif instance(other, Gaussian):
+        elif isinstance(other, Gaussian):
             return Gaussian(theta=self.embed().theta - other.theta)
         else:
             raise ValueError('unsupported division')
@@ -351,7 +351,6 @@ class FactorGaussian(object):
 
     def kl_div(self, other):
         return self.embed().kl_div(other)
-
 
     dim = property(_get_dim)
     theta_dim = property(_get_theta_dim)
@@ -387,7 +386,7 @@ class GaussianFamily(object):
         V.T[np.triu_indices(self._dim)] = V[idx]
         V -= np.dot(m.reshape(m.size, 1), m.reshape(1, m.size))
         return Gaussian(m, V, Z=Z)
-        
+
     def from_theta(self, theta):
         return Gaussian(theta=theta)
 
@@ -411,7 +410,7 @@ class FactorGaussianFamily(object):
         m = moment[1: (self._dim + 1)] / Z
         v = moment[(self._dim + 1):] / Z - m ** 2
         return FactorGaussian(m, v, Z=Z)
-        
+
     def from_theta(self, theta):
         return FactorGaussian(theta=theta)
 
