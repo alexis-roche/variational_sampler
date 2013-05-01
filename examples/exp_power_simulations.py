@@ -25,9 +25,8 @@ METHODS = {
 }
 
 mahalanobis = lambda f: np.sum(f.m * np.dot(np.linalg.inv(f.V), f.m))
-MEASURES = lambda f: f.Z,\
-    lambda f: f.Z - TARGET.Z,\
-    lambda f: mahalanobis(f),\
+MEASURES = lambda f: np.abs(f.Z - TARGET.Z),\
+    lambda f: np.sqrt(np.sum((f.m - TARGET.m) ** 2)),\
     lambda f: GS_FIT.kl_div(f)
 get_measures = lambda f: np.array([m(f) for m in MEASURES])
 
@@ -41,9 +40,10 @@ def display(durations, measures, robust=False):
     for k in range(len(MEASURES)):
         plt.figure()
         for m in METHODS.keys():
-            """plt.errorbar(NDRAWS, mu(measures[m][k]), std(measures[m][k]), fmt='o-')
+            plt.errorbar(NDRAWS, mu(measures[m][k]), std(measures[m][k]), fmt='o-')
             """
             plt.errorbar(mu(durations[m]), mu(measures[m][k]), std(measures[m][k]), fmt='o-')
+            """
         plt.legend(METHODS.keys(), loc=0)
     plt.show()
 
