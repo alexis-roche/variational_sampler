@@ -12,10 +12,6 @@ NPTS = 5
 DV = 4
 DM = -2
 
-BETA = 3
-DV = 1
-DM = 0
-NPTS = 100
 
 def gauss_hermite_rule(npts, mk, vk):
     """

@@ -1,7 +1,8 @@
 import numpy as np
 from variational_sampler import VariationalSampler
 
-DIM = 1
+DIM = 50
+
 
 def target(x, beta=2):
     """
