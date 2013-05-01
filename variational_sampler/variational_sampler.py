@@ -99,12 +99,14 @@ class VariationalSampler(object):
         self.pe, self.logscale = safe_exp(self.log_pe)
         self.log_pe -= self.logscale
 
-        # the input weights are assumed to come from a quadrature
-        # rule, so they need be multiplied by the number of points for
-        # consistency with the random case where the weighted sum
-        # approximates npts times the integral
+        # This is a temporary HACK to implement a deterministic
+        # version of VS.
+        # The input weights are assumed to come from a
+        # quadrature rule, so they need be multiplied by the number of
+        # points for consistency with the random case where the
+        # weights are conventionally one
         if not self.w == None:
-            self.log_w = np.log(self.w) + np.log(len(self.w))
+            self.log_pe += np.log(self.w) + np.log(len(self.w))
 
     def fit(self, objective='kl', **args):
         """
