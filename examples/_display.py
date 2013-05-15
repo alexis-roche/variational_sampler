@@ -14,7 +14,7 @@ def display_fit(xs, target, method, color=None, acronym=None):
     xmax = int(np.max(np.abs(xs.squeeze()))) + 1
     x = np.linspace(-xmax, xmax, 2 * xmax / 0.01)
     x = np.reshape(x, (1, x.size))
-    fits = [m.fit(x) for m in method]
+    fits = [m(x) for m in method]
     if color is None:
         for fit in fits:
             plt.plot(x.squeeze(), fit, linewidth=2)

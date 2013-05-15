@@ -63,7 +63,9 @@ if DETERMINISTIC:
 
 colors = ('blue', 'orange', 'green')
 plt.figure()
-display_fit(vs.x, target, (f_kl, f_l, f_gp), colors, ('VS', 'IS', 'BMC'))
+display_fit(vs.x, target, (f_kl.fit, f_l.fit, f_gp.fit),
+            colors, ('VS', 'IS', 'BMC'))
 plt.figure()
 if DETERMINISTIC:
-    display_fit(vsd.x, target, (fd_kl, fd_l, fd_gp), colors, ('VS', 'GH', 'GP'))
+    display_fit(vsd.x, target, (fd_kl.fit, fd_l.fit, fd_gp.fit),
+                colors, ('VS', 'GH', 'GP'))
