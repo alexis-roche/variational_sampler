@@ -2,7 +2,7 @@ import numpy as np
 import pylab as plt
 
 
-def display_fit(xs, target, method, color=None, acronym=None):
+def display_fit(xs, target, method, color=None, acronym=None, xmax=None):
     if not hasattr(method, '__iter__'):
         method = (method, )
         if not color is None:
@@ -11,7 +11,8 @@ def display_fit(xs, target, method, color=None, acronym=None):
             acronym = (acronym, )
     if not xs.shape[0] == 1:
         raise ValueError('univariate data expected')
-    xmax = int(np.max(np.abs(xs.squeeze()))) + 1
+    if xmax == None:
+        xmax = int(np.max(np.abs(xs.squeeze()))) + 1
     x = np.linspace(-xmax, xmax, 2 * xmax / 0.01)
     x = np.reshape(x, (1, x.size))
     fits = [m(x) for m in method]
