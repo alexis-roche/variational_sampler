@@ -5,7 +5,7 @@ from variational_sampler.gaussian import Gaussian
 from _toy_dist import ExponentialPowerLaw
 
 DIM = 5
-NPTS = 100 * DIM ** 2
+NPTS = 10* DIM ** 2
 
 
 def random_var():
