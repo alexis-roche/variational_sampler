@@ -7,7 +7,7 @@ from variational_sampler.gaussian import Gaussian
 from _toy_dist import ExponentialPowerLaw
 from _display import display_fit
 
-BETA = 3
+BETA = 2
 NPTS = 5
 DV = 4
 DM = -2
@@ -61,13 +61,14 @@ if DETERMINISTIC:
     print('Error for GP: %f' % gs_fit.kl_div(fd_gp.fit))
 
 
-colors = ('blue', 'orange', 'green')
+colors = ('black', 'gray', 'black')
+linefmt = ('-', '-', ':')
 xmax = int(np.max(np.abs(vsd.x.squeeze()))) + 1
 
 plt.figure()
 display_fit(vs.x, target, (f_kl.fit, f_l.fit, f_gp.fit),
-            colors, ('VS', 'IS', 'BMC'), xmax=xmax)
+            colors, linefmt, ('VS', 'IS', 'BMC'), xmax=xmax)
 plt.figure()
 if DETERMINISTIC:
     display_fit(vsd.x, target, (fd_kl.fit, fd_l.fit, fd_gp.fit),
-                colors, ('VS', 'GH', 'GP'), xmax=xmax)
+                colors, linefmt, ('VS', 'GH', 'GP'), xmax=xmax)
