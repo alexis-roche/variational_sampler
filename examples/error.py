@@ -13,8 +13,8 @@ KIND = 'kl'
 def error(v, kind='kl'):
     if kind == 'kl':
         return v.kl_error
-    elif kind == 'moment':
-        return v.var_moment[0, 0]
+    elif kind == 'integral':
+        return v.var_integral[0, 0]
     elif kind == 'theta':
         return v.var_theta[0, 0]
 

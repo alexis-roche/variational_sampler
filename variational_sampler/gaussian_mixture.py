@@ -19,7 +19,6 @@ class GaussianMixture(object):
         self._moments()
 
     def _moments(self):
-
         Z = 0.0
         m = np.zeros(self._dim)
         V = np.zeros((self._dim, self._dim))

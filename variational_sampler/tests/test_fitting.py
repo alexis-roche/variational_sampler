@@ -18,7 +18,7 @@ def _test_basic(vs, objective='kl'):
     f = vs.fit(objective=objective)
     print(f.theta)
     print(f.fit)
-    print(f.var_moment)
+    print(f.var_integral)
     print(f.fisher_info)
     print(f.var_theta)
     print(f.kl_error)

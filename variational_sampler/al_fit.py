@@ -11,11 +11,11 @@ families = {'gaussian': GaussianFamily,
             'factor_gaussian': FactorGaussianFamily}
 
 
-class LFit(object):
+class ALFit(object):
 
     def __init__(self, sample, family='gaussian'):
         """
-        Importance weighted likelihood fitting method.
+        Accelerated importance weighted likelihood fitting method.
         """
         t0 = time()
         self.sample = sample
@@ -36,7 +36,8 @@ class LFit(object):
 
     def _do_fitting(self):
         F = self._cache['F']
-        self._integral = np.dot(F, self.sample.pe) / self.npts
+        delta = self.sample.pe - self.kernel.Z
+        self._integral = np.dot(F, self.delta) / self.npts
         self._fit = self.family.from_integral(self._integral)
 
     def _get_integral(self):

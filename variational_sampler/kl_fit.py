@@ -141,7 +141,7 @@ class KLFit(object):
         self._theta = m.argmin()
         self.minimizer = m
 
-    def _var_moment(self, theta):
+    def _var_integral(self, theta):
         self._udpate_fit(theta)
         c = self._cache
         return np.dot(c['F'] * ((self.sample.pe - c['qe']) ** 2), c['F'].T)\
@@ -165,26 +165,26 @@ class KLFit(object):
         else:
             return self.family.from_theta(self.theta) * self.sample.kernel
 
-    def _get_var_moment(self):
-        return self._var_moment(self._theta)
+    def _get_var_integral(self):
+        return self._var_integral(self._theta)
 
     def _get_fisher_info(self):
         return self._fisher_info(self._theta)
 
     def _get_var_theta(self):
         inv_fisher_info = inv_sym_matrix(self.fisher_info)
-        return np.dot(np.dot(inv_fisher_info, self._var_moment(self._theta)),
+        return np.dot(np.dot(inv_fisher_info, self._var_integral(self._theta)),
                       inv_fisher_info)
 
     def _get_kl_error(self):
         """
         Estimate the expected excess KL divergence.
         """
-        return .5 * np.trace(np.dot(self.var_moment, inv_sym_matrix(self.fisher_info)))
+        return .5 * np.trace(np.dot(self.var_integral, inv_sym_matrix(self.fisher_info)))
 
     theta = property(_get_theta)
     fit = property(_get_fit)
-    var_moment = property(_get_var_moment)
+    var_integral = property(_get_var_integral)
     var_theta = property(_get_var_theta)
     fisher_info = property(_get_fisher_info)
     kl_error = property(_get_kl_error)

@@ -24,5 +24,3 @@ print('Error for VS: %f (expected: %f)'\
 print('Error for IS: %f (expected: %f)'\
            % (gopt.kl_div(f0.fit), f0.kl_error))
 print('Error for BMC: %f' % gopt.kl_div(f2.fit))
-
-

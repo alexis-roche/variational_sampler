@@ -377,12 +377,12 @@ class GaussianFamily(object):
         F = np.array([pts[i, :] * pts[j, :] for i, j in zip(I, J)])
         return np.concatenate((np.ones((1, pts.shape[1])), pts, F))
 
-    def from_moment(self, moment):
-        Z = moment[0]
-        m = moment[1: (self._dim + 1)] / Z
+    def from_integral(self, integral):
+        Z = integral[0]
+        m = integral[1: (self._dim + 1)] / Z
         V = np.zeros((self._dim, self._dim))
         idx = np.triu_indices(self._dim)
-        V[idx] = moment[(self._dim + 1):] / Z
+        V[idx] = integral[(self._dim + 1):] / Z
         V.T[np.triu_indices(self._dim)] = V[idx]
         V -= np.dot(m.reshape(m.size, 1), m.reshape(1, m.size))
         return Gaussian(m, V, Z=Z)
@@ -405,10 +405,10 @@ class FactorGaussianFamily(object):
         """
         return np.concatenate((np.ones((1, pts.shape[1])), pts,  pts ** 2))
 
-    def from_moment(self, moment):
-        Z = moment[0]
-        m = moment[1: (self._dim + 1)] / Z
-        v = moment[(self._dim + 1):] / Z - m ** 2
+    def from_integral(self, integral):
+        Z = integral[0]
+        m = integral[1: (self._dim + 1)] / Z
+        v = integral[(self._dim + 1):] / Z - m ** 2
         return FactorGaussian(m, v, Z=Z)
 
     def from_theta(self, theta):
