@@ -7,6 +7,7 @@ import numpy as np
 from .numlib import safe_exp
 from .gaussian import Gaussian, FactorGaussian
 from .kl_fit import KLFit
+from .kl2_fit import KL2Fit
 from .l_fit import LFit
 from .gp_fit import GPFit
 
@@ -17,20 +18,27 @@ def reflect_sample(xs, m):
 
 
 def as_gaussian(g):
-    if isinstance(g, Gaussian) or isinstance(g, FactorGaussian):
-        return g
-    try:
-        m = np.asarray(g[0])
-        V = np.asarray(g[1])
-        if V.ndim < 2:
-            G = FactorGaussian(m, V)
-        elif V.ndim == 2:
-            G = Gaussian(m, V)
-        else:
-            raise ValueError('input variance not understood')
-    except:
+    """
+    renormalize input to unit integral
+    """
+    if isinstance(g, Gaussian):
+        return g.Z, Gaussian(g.m, g.V)
+    elif isinstance(g, FactorGaussian):
+        return g.Z, FactorGaussian(g.m, g.v)
+    if len(g) == 2:
+        Z = None
+        m, V = np.asarray(g[0]), np.asarray(g[1])
+    elif len(g) == 3:
+        Z, m, V = float(g[0]), np.asarray(g[1]), np.asarray(g[2])
+    else:
         raise ValueError('input not understood')
-    return G
+    if V.ndim < 2:
+        G = FactorGaussian(m, V)
+    elif V.ndim == 2:
+        G = Gaussian(m, V)
+    else:
+        raise ValueError('input variance not understood')
+    return Z, G
 
 
 def sample_fun(f, x):
@@ -71,7 +79,7 @@ class VariationalSampler(object):
         reflect: bool
           if True, reflect the sample about the sampling kernel mean
         """
-        self.kernel = as_gaussian(kernel)
+        self.Z, self.kernel = as_gaussian(kernel)
         self.target = target
         self.ndraws = ndraws
         self.reflect = reflect
@@ -121,6 +129,8 @@ class VariationalSampler(object):
         """
         if objective == 'kl':
             return KLFit(self, **args)
+        elif objective == 'kl2':
+            return KL2Fit(self, **args)
         elif objective == 'l':
             return LFit(self, **args)
         elif objective == 'gp':

@@ -37,10 +37,11 @@ class LFit(object):
     def _do_fitting(self):
         F = self._cache['F']
         self._integral = np.dot(F, self.sample.pe) / self.npts
+        self._integral *= np.exp(self.sample.logscale)
         self._fit = self.family.from_integral(self._integral)
 
     def _get_integral(self):
-        return np.exp(self.sample.logscale) * self._integral
+        return self._integral
 
     def _get_var_integral(self):
         """
@@ -50,41 +51,39 @@ class LFit(object):
         n = integral.size
         var = np.dot(F * (pe ** 2), F.T) / self.npts \
             - np.dot(integral.reshape(n, 1), integral.reshape(1, n))
-        var *= np.exp(2 * self.sample.logscale) / self.npts
+        var /= self.npts
         return var
 
     def _get_fit(self):
-        K = self._fit.K * np.exp(self.sample.logscale)
-        return Gaussian(self._fit.m, self._fit.V, K)
+        return self._fit
 
     def _get_theta(self):
         theta = self._fit.theta.copy()
-        theta[0] += self.sample.logscale
         theta -= self.sample.kernel.theta
         return theta
 
-    def _get_fisher_info(self):
+    def _get_sensitivity_matrix(self):
         F = self._cache['F']
         # compute the fitted importance weights
-        log_qe = np.dot(F.T, self._fit.theta) + self.sample.logscale \
+        log_qe = np.dot(F.T, self._fit.theta) +\
             - self.sample.kernel.log(self.sample.x)
-        qe = np.exp(log_qe)
-        return np.dot(F * qe, F.T) \
-            * (np.exp(self.sample.logscale) / self.npts)
+        qe = np.exp(log_qe - self.sample.logscale)
+        return np.dot(F * qe, F.T) *\
+            (np.exp(self.sample.logscale) / self.npts)
 
     def _get_var_theta(self):
-        inv_fisher_info = inv_sym_matrix(self.fisher_info)
-        return np.dot(np.dot(inv_fisher_info, self.var_integral),
-                      inv_fisher_info)
+        inv_sensitivity_matrix = inv_sym_matrix(self.sensitivity_matrix)
+        return np.dot(np.dot(inv_sensitivity_matrix, self.var_integral),
+                      inv_sensitivity_matrix)
 
     def _get_kl_error(self):
         return .5 * np.trace(np.dot(self.var_integral,
-                                    inv_sym_matrix(self.fisher_info)))
+                                    inv_sym_matrix(self.sensitivity_matrix)))
 
     theta = property(_get_theta)
     fit = property(_get_fit)
     integral = property(_get_integral)
     var_integral = property(_get_var_integral)
     var_theta = property(_get_var_theta)
-    fisher_info = property(_get_fisher_info)
+    sensitivity_matrix = property(_get_sensitivity_matrix)
     kl_error = property(_get_kl_error)

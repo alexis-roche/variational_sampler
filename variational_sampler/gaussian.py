@@ -196,6 +196,16 @@ class Gaussian(object):
                            + other.Z - self.Z, 0.0)
         return self.Z * err + z_err
 
+    def integral(self):
+        Z = self._get_Z()
+        m = self._get_m()
+        I1 = Z * m
+        I2 = Z * (self._get_V()
+                  + np.dot(m.reshape((self._dim, 1)),
+                           m.reshape((1, self._dim))))[\
+            np.triu_indices(self._dim)]
+        return np.concatenate((np.array((Z,)), I1, I2))
+
     def __str__(self):
         s = 'Gaussian distribution with parameters:\n'
         s += str(self._get_Z()) + '\n'
@@ -216,11 +226,11 @@ class Gaussian(object):
 
 class FactorGaussian(object):
 
-    def __init__(self, m=None, V=None, K=None, Z=None, theta=None):
+    def __init__(self, m=None, v=None, K=None, Z=None, theta=None):
         if not theta == None:
             self._set_theta(theta)
         else:
-            self._set_moments(m, V, K, Z)
+            self._set_moments(m, v, K, Z)
 
     def _set_dimensions(self, dim):
         self._dim = dim
@@ -352,6 +362,13 @@ class FactorGaussian(object):
     def kl_div(self, other):
         return self.embed().kl_div(other)
 
+    def integral(self):
+        Z = self._get_Z()
+        m = self._get_m()
+        I1 = Z * m
+        I2 = Z * (self._get_v() + m ** 2)
+        return np.concatenate((np.array((Z,)), I1, I2))
+
     dim = property(_get_dim)
     theta_dim = property(_get_theta_dim)
     K = property(_get_K)
@@ -367,7 +384,8 @@ class FactorGaussian(object):
 class GaussianFamily(object):
 
     def __init__(self, dim):
-        self._dim = dim
+        self.dim = dim
+        self.theta_dim = (dim * (dim + 1)) / 2 + dim + 1
 
     def design_matrix(self, pts):
         """
@@ -379,11 +397,11 @@ class GaussianFamily(object):
 
     def from_integral(self, integral):
         Z = integral[0]
-        m = integral[1: (self._dim + 1)] / Z
-        V = np.zeros((self._dim, self._dim))
-        idx = np.triu_indices(self._dim)
-        V[idx] = integral[(self._dim + 1):] / Z
-        V.T[np.triu_indices(self._dim)] = V[idx]
+        m = integral[1: (self.dim + 1)] / Z
+        V = np.zeros((self.dim, self.dim))
+        idx = np.triu_indices(self.dim)
+        V[idx] = integral[(self.dim + 1):] / Z
+        V.T[np.triu_indices(self.dim)] = V[idx]
         V -= np.dot(m.reshape(m.size, 1), m.reshape(1, m.size))
         return Gaussian(m, V, Z=Z)
 
@@ -397,7 +415,8 @@ class GaussianFamily(object):
 class FactorGaussianFamily(object):
 
     def __init__(self, dim):
-        self._dim = dim
+        self.dim = dim
+        self.theta_dim = 2 * dim + 1
 
     def design_matrix(self, pts):
         """
@@ -407,8 +426,8 @@ class FactorGaussianFamily(object):
 
     def from_integral(self, integral):
         Z = integral[0]
-        m = integral[1: (self._dim + 1)] / Z
-        v = integral[(self._dim + 1):] / Z - m ** 2
+        m = integral[1: (self.dim + 1)] / Z
+        v = integral[(self.dim + 1):] / Z - m ** 2
         return FactorGaussian(m, v, Z=Z)
 
     def from_theta(self, theta):

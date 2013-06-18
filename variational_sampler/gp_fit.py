@@ -65,7 +65,8 @@ class GPFit(object):
     def _get_fit(self):
         x = self.sample.x
         K = np.exp(self.sample.logscale)
-        gaussians = [self.sample.kernel * FactorGaussian(xi, self._v, K=K) for xi in x.T]
+        gaussians = [self.sample.kernel *\
+                         FactorGaussian(xi, self._v, K=K) for xi in x.T]
         return GaussianMixture(self._theta, gaussians)
 
     theta = property(_get_theta)

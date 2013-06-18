@@ -138,22 +138,23 @@ class ConjugateDescent(SteepestDescent):
 
 class NewtonDescent(SteepestDescent):
 
-    def __init__(self, x, f, grad_f, hess_f, maxiter=None, tol=1e-7, verbose=False):
+    def __init__(self, x, f, grad_f, hess_f, maxiter=None, tol=1e-7,
+                 verbose=False):
         self._generic_init(x, f, grad_f, maxiter, tol, verbose)
         self.hess_f = hess_f
         self.run()
-        
+
     def direction(self):
         """
         Compute the gradient g and Hessian H, then solve H dx = -g
         using the Cholesky decomposition: H = L L.T
-        
+
         Upon failure, approximate the Hessian by a scalar matrix,
         i.e. H = tr(H) / n Id
         """
         g = self.grad_f(self.x)
         H = self.hess_f(self.x)
-        try:  
+        try:
             L, _ = cho_factor(H, lower=0)
             dx = -cho_solve((L, 0), g)
         except:
@@ -165,11 +166,12 @@ class NewtonDescent(SteepestDescent):
 
 class QuasiNewtonDescent(SteepestDescent):
 
-    def __init__(self, x, f, grad_f, fix_hess_f, maxiter=None, tol=1e-7, verbose=False):
+    def __init__(self, x, f, grad_f, fix_hess_f, maxiter=None, tol=1e-7,
+                 verbose=False):
         self._generic_init(x, f, grad_f, maxiter, tol, verbose)
         self.Hinv = inv_sym_matrix(fix_hess_f)
         self.run()
-    
+
     def direction(self):
         g = self.grad_f(self.x)
         dx = -np.dot(self.Hinv, g)
@@ -191,11 +193,12 @@ class ScipyCG(object):
 
     def message(self):
         print('Scipy conjugate gradient implementation')
-    
+
 
 class ScipyNCG(object):
 
-    def __init__(self, x, f, grad_f, hess_f, maxiter=None, tol=1e-7, verbose=False):
+    def __init__(self, x, f, grad_f, hess_f, maxiter=None, tol=1e-7,
+                 verbose=False):
         t0 = time()
         stuff = fmin_ncg(f, x, grad_f, fhess=hess_f, args=(),
                          maxiter=maxiter, avextol=tol,
@@ -225,8 +228,8 @@ class ScipyBFGS(object):
 
     def message(self):
         print('Scipy BFGS quasi-Newton implementation')
-    
-    
+
+
 min_methods = {'steepest': SteepestDescent,
                'conjugate': ConjugateDescent,
                'newton': NewtonDescent,

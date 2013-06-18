@@ -13,7 +13,7 @@ families = {'gaussian': GaussianFamily,
 class KLFit(object):
 
     def __init__(self, sample, family='gaussian', tol=1e-5, maxiter=None,
-                 minimizer='newton', theta=None):
+                 minimizer='newton'):
         """
         Sampling-based KL divergence minimization.
 
@@ -47,11 +47,11 @@ class KLFit(object):
             }
 
         # Initial guess for theta parameter (default is optimal constant fit)
-        if theta is None:
-            self._theta_init = np.zeros(self._cache['F'].shape[0])
+        self._theta_init = np.zeros(self._cache['F'].shape[0])
+        if self.sample.Z is None:
             self._theta_init[0] = np.log(np.mean(self.sample.pe))
         else:
-            self._theta_init = np.asarray(theta)
+            self._theta_init[0] = np.log(self.sample.Z) - self.sample.logscale
 
         # Perform fit
         self.minimizer = minimizer
@@ -60,7 +60,7 @@ class KLFit(object):
         self._do_fitting()
         self.time = time() - t0
 
-    def _udpate_fit(self, theta):
+    def _update_fit(self, theta):
         """
         Compute fit
         """
@@ -84,7 +84,7 @@ class KLFit(object):
           pe is the target distribution
           qe is the parametric fit
         """
-        if not self._udpate_fit(theta):
+        if not self._update_fit(theta):
             return np.inf
         c = self._cache
         return np.sum(self.sample.pe * (self.sample.log_pe - c['log_qe'])
@@ -94,7 +94,7 @@ class KLFit(object):
         """
         Compute the gradient of the loss.
         """
-        self._udpate_fit(theta)
+        self._update_fit(theta)
         c = self._cache
         return np.dot(c['F'], c['qe'] - self.sample.pe)
 
@@ -102,7 +102,7 @@ class KLFit(object):
         """
         Compute the hessian of the loss.
         """
-        self._udpate_fit(theta)
+        self._update_fit(theta)
         c = self._cache
         return np.dot(c['F'] * c['qe'], c['F'].T)
 
@@ -142,14 +142,14 @@ class KLFit(object):
         self.minimizer = m
 
     def _var_integral(self, theta):
-        self._udpate_fit(theta)
+        self._update_fit(theta)
         c = self._cache
         return np.dot(c['F'] * ((self.sample.pe - c['qe']) ** 2), c['F'].T)\
             * (np.exp(2 * self.sample.logscale) / (self.npts ** 2))
 
-    def _fisher_info(self, theta):
-        return self._hessian(self._theta)\
-            * (np.exp(self.sample.logscale) / self.npts)
+    def _sensitivity_matrix(self, theta):
+        return self._hessian(self._theta) *\
+            (np.exp(self.sample.logscale) / self.npts)
 
     def _get_theta(self):
         theta = self._theta.copy()
@@ -158,8 +158,9 @@ class KLFit(object):
 
     def _get_fit(self):
         if self.family.check(self.sample.kernel):
-            return self.family.from_theta(self.theta + self.sample.kernel.theta)
-        elif len(self.sample.kernel.theta) < len(self.theta):
+            return self.family.from_theta(\
+                self.theta + self.sample.kernel.theta)
+        elif self.sample.kernel.theta_dim < self.family.theta_dim:
             kernel = self.sample.kernel.embed()
             return self.family.from_theta(kernel.theta + self.theta)
         else:
@@ -168,23 +169,25 @@ class KLFit(object):
     def _get_var_integral(self):
         return self._var_integral(self._theta)
 
-    def _get_fisher_info(self):
-        return self._fisher_info(self._theta)
+    def _get_sensitivity_matrix(self):
+        return self._sensitivity_matrix(self._theta)
 
     def _get_var_theta(self):
-        inv_fisher_info = inv_sym_matrix(self.fisher_info)
-        return np.dot(np.dot(inv_fisher_info, self._var_integral(self._theta)),
-                      inv_fisher_info)
+        inv_sensitivity_matrix = inv_sym_matrix(self.sensitivity_matrix)
+        return np.dot(np.dot(inv_sensitivity_matrix,
+                             self._var_integral(self._theta)),
+                      inv_sensitivity_matrix)
 
     def _get_kl_error(self):
         """
         Estimate the expected excess KL divergence.
         """
-        return .5 * np.trace(np.dot(self.var_integral, inv_sym_matrix(self.fisher_info)))
+        return .5 * np.trace(np.dot(self.var_integral,
+                                    inv_sym_matrix(self.sensitivity_matrix)))
 
     theta = property(_get_theta)
     fit = property(_get_fit)
     var_integral = property(_get_var_integral)
     var_theta = property(_get_var_theta)
-    fisher_info = property(_get_fisher_info)
+    sensitivity_matrix = property(_get_sensitivity_matrix)
     kl_error = property(_get_kl_error)

@@ -19,7 +19,7 @@ def _test_basic(vs, objective='kl'):
     print(f.theta)
     print(f.fit)
     print(f.var_integral)
-    print(f.fisher_info)
+    print(f.sensitivity_matrix)
     print(f.var_theta)
     print(f.kl_error)
 
