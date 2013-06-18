@@ -4,15 +4,15 @@ from variational_sampler.gaussian import Gaussian
 from _toy_dist import ExponentialPowerLaw
 
 
-BETA = 2
-DIM = 5
+BETA = 3
+DIM = 15
 NPTS = 8 * DIM ** 2
 
 target = ExponentialPowerLaw(beta=BETA, dim=DIM)
 
 h2 = np.diagonal(target.V)
 
-vs = VariationalSampler(target, (np.zeros(DIM), h2), ndraws=NPTS)
+vs = VariationalSampler(target, (1., np.zeros(DIM), h2), ndraws=NPTS)
 f = vs.fit(minimizer='quasi_newton')
 f2 = vs.fit('kl2')
 f0 = vs.fit('l')

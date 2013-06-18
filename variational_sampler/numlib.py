@@ -67,6 +67,7 @@ class SteepestDescent(object):
         while self.iter < self.maxiter:
             # Evaluate function at current point
             xN = self.x
+            xN_norm = np.max(np.abs(xN))
             fvalN = self.fval
 
             # Compute descent direction
@@ -88,7 +89,7 @@ class SteepestDescent(object):
                     a *= 2
                 else:
                     a *= .5
-                    stuck = abs(a * dx_norm) < self.tol
+                    stuck = abs(a * dx_norm) < self.tol * (1 + xN_norm)
                     done = self.fval < fvalN or stuck
 
             # Termination test

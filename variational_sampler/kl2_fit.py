@@ -4,7 +4,7 @@ import numpy as np
 from .numlib import inv_sym_matrix, SteepestDescent
 from .gaussian import GaussianFamily, FactorGaussianFamily
 
-VERBOSE = False
+VERBOSE = True
 
 families = {'gaussian': GaussianFamily,
             'factor_gaussian': FactorGaussianFamily}
