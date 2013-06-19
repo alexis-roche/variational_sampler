@@ -12,7 +12,8 @@ families = {'gaussian': GaussianFamily,
 
 class KL2Fit(object):
 
-    def __init__(self, sample, family='gaussian', tol=1e-5, maxiter=None):
+    def __init__(self, sample, family='gaussian',
+                 tol=1e-5, adaptive=True, maxiter=None):
         """
         Sampling-based KL divergence minimization.
 
@@ -48,6 +49,7 @@ class KL2Fit(object):
         if maxiter is None:
             maxiter = np.inf
         self.maxiter = maxiter
+        self.adaptive = adaptive
         self._do_fitting()
         self.time = time() - t0
 
@@ -77,11 +79,11 @@ class KL2Fit(object):
         Perform Gaussian approximation.
         """
         # Compute importance sampling integral estimate
-        F = self._cache['F']
-        self._cache['hat_tau_p'] = np.dot(F, self.sample.pe) / self.npts
+        self._cache['hat_tau_p'] = np.dot(self._cache['F'], self.sample.pe) /\
+            self.npts
         # Define the initial fit as the (unnormalized) sampling kernel
         if self.family.check(self.sample.kernel):
-            q = self.sample.kernel
+            q = self.sample.kernel.copy()
         elif self.sample.kernel.theta_dim < self.family.theta_dim:
             q = self.sample.kernel.embed()
         else:
@@ -89,12 +91,13 @@ class KL2Fit(object):
         if self.sample.Z is None:
             Z = np.mean(self.sample.pe)
         else:
-            Z = self.sample.Z / np.exp(self.sample.logscale)
+            #Z = self.sample.Z / np.exp(self.sample.logscale)
+            Z = np.exp(np.log(self.sample.Z) - self.sample.logscale)
         q.rescale(Z)
         tau = q.integral()
         m = SteepestDescent(tau, self._loss, self._pseudo_gradient,
                             maxiter=self.maxiter, tol=self.tol,
-                            verbose=VERBOSE)
+                            adaptive=self.adaptive, verbose=VERBOSE)
         if VERBOSE:
             m.message()
         tau = m.argmin()

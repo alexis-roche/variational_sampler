@@ -40,12 +40,16 @@ def inv_sym_matrix(A):
 
 class SteepestDescent(object):
 
-    def __init__(self, x, f, grad_f, maxiter=None, tol=1e-7, verbose=False):
-        self._generic_init(x, f, grad_f, maxiter, tol, verbose)
+    def __init__(self, x, f, grad_f, maxiter=None, tol=1e-7,
+                 stepsize=1., adaptive=True, verbose=False):
+        self._generic_init(x, f, grad_f, maxiter, tol,
+                           stepsize, adaptive, verbose)
         self.run()
 
-    def _generic_init(self, x, f, grad_f, maxiter, tol, verbose):
+    def _generic_init(self, x, f, grad_f, maxiter, tol,
+                      stepsize, adaptive, verbose):
         self.x = np.asarray(x).ravel()
+        self.ref_norm = np.maximum(tol, np.max(np.abs(x)))
         self.f = f
         self.grad_f = grad_f
         if maxiter == None:
@@ -56,7 +60,8 @@ class SteepestDescent(object):
         self.fval0 = self.fval
         self.iter = 0
         self.nevals = 1
-        self.a = 1
+        self.a = stepsize
+        self.adaptive = adaptive
         self.verbose = verbose
 
     def direction(self):
@@ -67,7 +72,6 @@ class SteepestDescent(object):
         while self.iter < self.maxiter:
             # Evaluate function at current point
             xN = self.x
-            xN_norm = np.max(np.abs(xN))
             fvalN = self.fval
 
             # Compute descent direction
@@ -80,6 +84,9 @@ class SteepestDescent(object):
             a = self.a
             while not done:
                 x = np.nan_to_num(xN + a * dx)
+                if not self.adaptive:
+                    self.x = x
+                    break
                 fval = self.f(x)
                 self.nevals += 1
                 if fval < self.fval:
@@ -89,7 +96,7 @@ class SteepestDescent(object):
                     a *= 2
                 else:
                     a *= .5
-                    stuck = abs(a * dx_norm) < self.tol * (1 + xN_norm)
+                    stuck = abs(a * dx_norm) < self.tol * self.ref_norm
                     done = self.fval < fvalN or stuck
 
             # Termination test
@@ -113,8 +120,10 @@ class SteepestDescent(object):
 
 class ConjugateDescent(SteepestDescent):
 
-    def __init__(self, x, f, grad_f, maxiter=None, tol=1e-7, verbose=False):
-        self._generic_init(x, f, grad_f, maxiter, tol, verbose)
+    def __init__(self, x, f, grad_f, maxiter=None, tol=1e-7,
+                 stepsize=1., adaptive=True, verbose=False):
+        self._generic_init(x, f, grad_f, maxiter, tol,
+                           stepsize, adaptive, verbose)
         self.prev_dx = None
         self.prev_g = None
         self.run()
@@ -140,8 +149,9 @@ class ConjugateDescent(SteepestDescent):
 class NewtonDescent(SteepestDescent):
 
     def __init__(self, x, f, grad_f, hess_f, maxiter=None, tol=1e-7,
-                 verbose=False):
-        self._generic_init(x, f, grad_f, maxiter, tol, verbose)
+                 stepsize=1., adaptive=True, verbose=False):
+        self._generic_init(x, f, grad_f, maxiter, tol,
+                           stepsize, adaptive, verbose)
         self.hess_f = hess_f
         self.run()
 
@@ -168,8 +178,9 @@ class NewtonDescent(SteepestDescent):
 class QuasiNewtonDescent(SteepestDescent):
 
     def __init__(self, x, f, grad_f, fix_hess_f, maxiter=None, tol=1e-7,
-                 verbose=False):
-        self._generic_init(x, f, grad_f, maxiter, tol, verbose)
+                 stepsize=1., adaptive=True, verbose=False):
+        self._generic_init(x, f, grad_f, maxiter, tol,
+                           stepsize, adaptive, verbose)
         self.Hinv = inv_sym_matrix(fix_hess_f)
         self.run()
 

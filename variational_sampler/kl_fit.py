@@ -4,7 +4,7 @@ import numpy as np
 from .numlib import inv_sym_matrix, min_methods
 from .gaussian import GaussianFamily, FactorGaussianFamily
 
-VERBOSE = True
+VERBOSE = False
 
 families = {'gaussian': GaussianFamily,
             'factor_gaussian': FactorGaussianFamily}

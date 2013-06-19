@@ -213,6 +213,9 @@ class Gaussian(object):
         s += str(self._V) + '\n'
         return s
 
+    def copy(self):
+        return self.__class__(self._m, self._V, K=self._K)
+
     dim = property(_get_dim)
     theta_dim = property(_get_theta_dim)
     K = property(_get_K)
@@ -368,6 +371,9 @@ class FactorGaussian(object):
         I1 = Z * m
         I2 = Z * (self._get_v() + m ** 2)
         return np.concatenate((np.array((Z,)), I1, I2))
+
+    def copy(self):
+        return self.__class__(self._m, self._v, K=self._K)
 
     dim = property(_get_dim)
     theta_dim = property(_get_theta_dim)
