@@ -1,8 +1,7 @@
 from time import time
-from warnings import warn
 import numpy as np
 
-from .numlib import safe_exp, inv_sym_matrix, min_methods
+from .numlib import inv_sym_matrix, min_methods
 from .gaussian import GaussianFamily, FactorGaussianFamily
 
 VERBOSE = False
@@ -14,7 +13,7 @@ families = {'gaussian': GaussianFamily,
 class KLFit(object):
 
     def __init__(self, sample, family='gaussian', tol=1e-5, maxiter=None,
-                 minimizer='newton', theta=None):
+                 minimizer='newton'):
         """
         Sampling-based KL divergence minimization.
 
@@ -40,24 +39,19 @@ class KLFit(object):
         self.family = families[family](self.dim)
 
         # Pre-compute some stuff and cache it
-        pw, self.logscale = safe_exp(self.sample.log_p + self.sample.log_w)
         self._cache = {
             'theta': None,
             'F': self.family.design_matrix(sample.x),
-            'pw': pw,
-            'log_p': self.sample.log_p,
-            'qw': None,
-            'log_q': None
+            'qe': None,
+            'log_qe': None
             }
 
         # Initial guess for theta parameter (default is optimal constant fit)
-        if theta is None:
-            self._theta_init = np.zeros(self._cache['F'].shape[0])
-            tmp = np.sum(self._cache['pw'])
-            tmp2 = np.sum(np.exp(self.sample.log_w - self.logscale))
-            self._theta_init[0] = np.nan_to_num(np.log(tmp / tmp2))
+        self._theta_init = np.zeros(self._cache['F'].shape[0])
+        if self.sample.Z is None:
+            self._theta_init[0] = np.log(np.mean(self.sample.pe))
         else:
-            self._theta_init = np.asarray(theta)
+            self._theta_init[0] = np.log(self.sample.Z) - self.sample.logscale
 
         # Perform fit
         self.minimizer = minimizer
@@ -66,16 +60,16 @@ class KLFit(object):
         self._do_fitting()
         self.time = time() - t0
 
-    def _udpate_fit(self, theta):
+    def _update_fit(self, theta):
         """
         Compute fit
         """
         c = self._cache
         if not theta is c['theta']:
-            c['log_q'] = np.dot(c['F'].T, theta)
-            c['qw'] = np.exp(c['log_q'] + self.sample.log_w - self.logscale)
+            c['log_qe'] = np.dot(c['F'].T, theta)
+            c['qe'] = np.exp(c['log_qe'])
             c['theta'] = theta
-            fail = np.isinf(c['log_q']).max() or np.isinf(c['qw']).max()
+            fail = np.isinf(c['log_qe']).max() or np.isinf(c['qe']).max()
         else:
             fail = False
         return not fail
@@ -84,33 +78,33 @@ class KLFit(object):
         """
         Compute the empirical divergence:
 
-          sum[pw * log pw/qw + qw - pw],
+          sum[pe * log pe/qe + qe - pe],
 
         where:
-          pw is the target distribution
-          qw is the parametric fit
+          pe is the target distribution
+          qe is the parametric fit
         """
-        if not self._udpate_fit(theta):
+        if not self._update_fit(theta):
             return np.inf
         c = self._cache
-        return np.sum(c['pw'] * (c['log_p'] - c['log_q'])
-                      + c['qw'] - c['pw'])
+        return np.sum(self.sample.pe * (self.sample.log_pe - c['log_qe'])
+                      + c['qe'] - self.sample.pe)
 
     def _gradient(self, theta):
         """
         Compute the gradient of the loss.
         """
-        self._udpate_fit(theta)
+        self._update_fit(theta)
         c = self._cache
-        return np.dot(c['F'], c['qw'] - c['pw'])
+        return np.dot(c['F'], c['qe'] - self.sample.pe)
 
     def _hessian(self, theta):
         """
         Compute the hessian of the loss.
         """
-        self._udpate_fit(theta)
+        self._update_fit(theta)
         c = self._cache
-        return np.dot(c['F'] * c['qw'], c['F'].T)
+        return np.dot(c['F'] * c['qe'], c['F'].T)
 
     def _pseudo_hessian(self):
         """
@@ -118,7 +112,7 @@ class KLFit(object):
         fitted distribution with the target distribution.
         """
         c = self._cache
-        return np.dot(c['F'] * c['pw'], c['F'].T)
+        return np.dot(c['F'] * self.sample.pe, c['F'].T)
 
     def _do_fitting(self):
         """
@@ -147,54 +141,53 @@ class KLFit(object):
         self._theta = m.argmin()
         self.minimizer = m
 
-    def _var_moment(self, theta):
-        self._udpate_fit(theta)
+    def _var_integral(self, theta):
+        self._update_fit(theta)
         c = self._cache
-        return np.dot(c['F'] * ((c['pw'] - c['qw']) ** 2), c['F'].T)\
-            * (np.exp(2 * self.logscale) / (self.npts ** 2))
+        return np.dot(c['F'] * ((self.sample.pe - c['qe']) ** 2), c['F'].T)\
+            * (np.exp(2 * self.sample.logscale) / (self.npts ** 2))
 
-    def _fisher_info(self, theta):
-        return self._hessian(self.theta) * (np.exp(self.logscale) / self.npts)
+    def _sensitivity_matrix(self, theta):
+        return self._hessian(self._theta) *\
+            (np.exp(self.sample.logscale) / self.npts)
 
     def _get_theta(self):
-        return self._theta
+        theta = self._theta.copy()
+        theta[0] += self.sample.logscale
+        return theta
 
     def _get_fit(self):
-        return self.family.from_theta(self.theta)
-
-    def _get_glob_fit(self):
-        if self.sample.context is None:
-            return self._get_fit()
-        elif self.family.check(self.sample.context):
-            return self.family.from_theta(self.theta + self.sample.context.theta)
+        if self.family.check(self.sample.kernel):
+            return self.family.from_theta(\
+                self.theta + self.sample.kernel.theta)
+        elif self.sample.kernel.theta_dim < self.family.theta_dim:
+            kernel = self.sample.kernel.embed()
+            return self.family.from_theta(kernel.theta + self.theta)
         else:
-            try:
-                return self._get_fit() * self.sample.context
-            except:
-                warn('cannnot multiply fit with context')
-                return None
+            return self.family.from_theta(self.theta) * self.sample.kernel
 
-    def _get_var_moment(self):
-        return self._var_moment(self.theta)
+    def _get_var_integral(self):
+        return self._var_integral(self._theta)
 
-    def _get_fisher_info(self):
-        return self._fisher_info(self.theta)
+    def _get_sensitivity_matrix(self):
+        return self._sensitivity_matrix(self._theta)
 
     def _get_var_theta(self):
-        inv_fisher_info = inv_sym_matrix(self.fisher_info)
-        return np.dot(np.dot(inv_fisher_info, self._var_moment(self.theta)),
-                      inv_fisher_info)
+        inv_sensitivity_matrix = inv_sym_matrix(self.sensitivity_matrix)
+        return np.dot(np.dot(inv_sensitivity_matrix,
+                             self._var_integral(self._theta)),
+                      inv_sensitivity_matrix)
 
     def _get_kl_error(self):
         """
         Estimate the expected excess KL divergence.
         """
-        return .5 * np.trace(self.var_moment * inv_sym_matrix(self.fisher_info))
+        return .5 * np.trace(np.dot(self.var_integral,
+                                    inv_sym_matrix(self.sensitivity_matrix)))
 
     theta = property(_get_theta)
     fit = property(_get_fit)
-    glob_fit = property(_get_glob_fit)
-    var_moment = property(_get_var_moment)
+    var_integral = property(_get_var_integral)
     var_theta = property(_get_var_theta)
-    fisher_info = property(_get_fisher_info)
+    sensitivity_matrix = property(_get_sensitivity_matrix)
     kl_error = property(_get_kl_error)

@@ -3,6 +3,7 @@ from variational_sampler import VariationalSampler
 
 DIM = 50
 
+
 def target(x, beta=2):
     """
     Function that takes an array with shape (dim, n) as input and

@@ -4,8 +4,10 @@ Variational sampling
 from time import time
 import numpy as np
 
+from .numlib import safe_exp
 from .gaussian import Gaussian, FactorGaussian
 from .kl_fit import KLFit
+from .kl2_fit import KL2Fit
 from .l_fit import LFit
 from .gp_fit import GPFit
 
@@ -16,20 +18,27 @@ def reflect_sample(xs, m):
 
 
 def as_gaussian(g):
-    if isinstance(g, Gaussian) or isinstance(g, FactorGaussian):
-        return g
-    try:
-        m = np.asarray(g[0])
-        V = np.asarray(g[1])
-        if V.ndim < 2:
-            G = FactorGaussian(m, V)
-        elif V.ndim == 2:
-            G = Gaussian(m, V)
-        else:
-            raise ValueError('input variance not understood')
-    except:
+    """
+    renormalize input to unit integral
+    """
+    if isinstance(g, Gaussian):
+        return g.Z, Gaussian(g.m, g.V)
+    elif isinstance(g, FactorGaussian):
+        return g.Z, FactorGaussian(g.m, g.v)
+    if len(g) == 2:
+        Z = None
+        m, V = np.asarray(g[0]), np.asarray(g[1])
+    elif len(g) == 3:
+        Z, m, V = float(g[0]), np.asarray(g[1]), np.asarray(g[2])
+    else:
         raise ValueError('input not understood')
-    return G
+    if V.ndim < 2:
+        G = FactorGaussian(m, V)
+    elif V.ndim == 2:
+        G = Gaussian(m, V)
+    else:
+        raise ValueError('input variance not understood')
+    return Z, G
 
 
 def sample_fun(f, x):
@@ -45,7 +54,7 @@ def sample_fun(f, x):
 class VariationalSampler(object):
 
     def __init__(self, target, kernel, ndraws, reflect=False,
-                 context=None, x=None, w=None):
+                 x=None, w=None):
         """
         Variational sampler class.
 
@@ -69,20 +78,9 @@ class VariationalSampler(object):
 
         reflect: bool
           if True, reflect the sample about the sampling kernel mean
-
-        context: tuple
-          a tuple `(m, V)` similar to the kernel argument that defines
-          the local KL divergence used as a fitting objective. If
-          None, the global KL divergence is used.
         """
-        self.kernel = as_gaussian(kernel)
+        self.Z, self.kernel = as_gaussian(kernel)
         self.target = target
-        if context is None:
-            self.context = None
-        elif context == 'kernel':
-            self.context = self.kernel
-        else:
-            self.context = as_gaussian(context)
         self.ndraws = ndraws
         self.reflect = reflect
 
@@ -103,19 +101,20 @@ class VariationalSampler(object):
             self.x = np.reshape(self.x, (self.kernel.dim, len(self.x)))
         if self.reflect:
             self.x = reflect_sample(self.x, self.kernel.m)
-        self.log_p, self.target = sample_fun(self.target, self.x)
-        if self.context is self.kernel:
-            self.log_w = np.zeros(self.log_p.size)
-        elif self.context is None:
-            self.log_w = -self.kernel.log(self.x)
-        else:
-            self.log_w = self.context.log(self.x) - self.kernel.log(self.x)
-        # the input weights are assumed to come from a quadrature
-        # rule, so they need be multiplied by the number of points for
-        # consistency with the random case where the weighted sum
-        # approximates npts times the integral
+        log_p, self.target = sample_fun(self.target, self.x)
+
+        self.log_pe = log_p - self.kernel.log(self.x)
+        self.pe, self.logscale = safe_exp(self.log_pe)
+        self.log_pe -= self.logscale
+
+        # This is a temporary HACK to implement a deterministic
+        # version of VS.
+        # The input weights are assumed to come from a
+        # quadrature rule, so they need be multiplied by the number of
+        # points for consistency with the random case where the
+        # weights are conventionally one
         if not self.w == None:
-            self.log_w += np.log(self.w) + np.log(len(self.w))
+            self.log_pe += np.log(self.w) + np.log(len(self.w))
 
     def fit(self, objective='kl', **args):
         """
@@ -130,6 +129,8 @@ class VariationalSampler(object):
         """
         if objective == 'kl':
             return KLFit(self, **args)
+        elif objective == 'kl2':
+            return KL2Fit(self, **args)
         elif objective == 'l':
             return LFit(self, **args)
         elif objective == 'gp':

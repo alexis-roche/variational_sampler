@@ -126,8 +126,8 @@ def test_gaussian_family():
     V = np.random.rand(5, 5)
     V = np.dot(V.T, V)
     E = V + np.dot(m.reshape((5, 1)), m.reshape((1, 5)))
-    moment = np.concatenate(((1,), m, E[np.triu_indices(5)]))
-    g = f.from_moment(moment)
+    integral = np.concatenate(((1,), m, E[np.triu_indices(5)]))
+    g = f.from_integral(integral)
     assert_almost_equal(g.Z, 1)
     assert_array_almost_equal(g.m, m)
     assert_array_almost_equal(g.V, V)
@@ -139,8 +139,8 @@ def test_factor_gaussian_family():
     m = np.random.rand(5)
     v = np.random.rand(5) ** 2
     e = v + m ** 2
-    moment = np.concatenate(((1,), m, e))
-    g = f.from_moment(moment)
+    integral = np.concatenate(((1,), m, e))
+    g = f.from_integral(integral)
     assert_almost_equal(g.Z, 1)
     assert_array_almost_equal(g.m, m)
     assert_array_almost_equal(g.v, v)

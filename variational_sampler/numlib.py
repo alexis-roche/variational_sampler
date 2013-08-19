@@ -40,12 +40,16 @@ def inv_sym_matrix(A):
 
 class SteepestDescent(object):
 
-    def __init__(self, x, f, grad_f, maxiter=None, tol=1e-7, verbose=False):
-        self._generic_init(x, f, grad_f, maxiter, tol, verbose)
+    def __init__(self, x, f, grad_f, maxiter=None, tol=1e-7,
+                 stepsize=1., adaptive=True, verbose=False):
+        self._generic_init(x, f, grad_f, maxiter, tol,
+                           stepsize, adaptive, verbose)
         self.run()
 
-    def _generic_init(self, x, f, grad_f, maxiter, tol, verbose):
+    def _generic_init(self, x, f, grad_f, maxiter, tol,
+                      stepsize, adaptive, verbose):
         self.x = np.asarray(x).ravel()
+        self.ref_norm = np.maximum(tol, np.max(np.abs(x)))
         self.f = f
         self.grad_f = grad_f
         if maxiter == None:
@@ -56,7 +60,8 @@ class SteepestDescent(object):
         self.fval0 = self.fval
         self.iter = 0
         self.nevals = 1
-        self.a = 1
+        self.a = stepsize
+        self.adaptive = adaptive
         self.verbose = verbose
 
     def direction(self):
@@ -79,6 +84,9 @@ class SteepestDescent(object):
             a = self.a
             while not done:
                 x = np.nan_to_num(xN + a * dx)
+                if not self.adaptive:
+                    self.x = x
+                    break
                 fval = self.f(x)
                 self.nevals += 1
                 if fval < self.fval:
@@ -88,7 +96,7 @@ class SteepestDescent(object):
                     a *= 2
                 else:
                     a *= .5
-                    stuck = abs(a * dx_norm) < self.tol
+                    stuck = abs(a * dx_norm) < self.tol * self.ref_norm
                     done = self.fval < fvalN or stuck
 
             # Termination test
@@ -112,8 +120,10 @@ class SteepestDescent(object):
 
 class ConjugateDescent(SteepestDescent):
 
-    def __init__(self, x, f, grad_f, maxiter=None, tol=1e-7, verbose=False):
-        self._generic_init(x, f, grad_f, maxiter, tol, verbose)
+    def __init__(self, x, f, grad_f, maxiter=None, tol=1e-7,
+                 stepsize=1., adaptive=True, verbose=False):
+        self._generic_init(x, f, grad_f, maxiter, tol,
+                           stepsize, adaptive, verbose)
         self.prev_dx = None
         self.prev_g = None
         self.run()
@@ -138,22 +148,24 @@ class ConjugateDescent(SteepestDescent):
 
 class NewtonDescent(SteepestDescent):
 
-    def __init__(self, x, f, grad_f, hess_f, maxiter=None, tol=1e-7, verbose=False):
-        self._generic_init(x, f, grad_f, maxiter, tol, verbose)
+    def __init__(self, x, f, grad_f, hess_f, maxiter=None, tol=1e-7,
+                 stepsize=1., adaptive=True, verbose=False):
+        self._generic_init(x, f, grad_f, maxiter, tol,
+                           stepsize, adaptive, verbose)
         self.hess_f = hess_f
         self.run()
-        
+
     def direction(self):
         """
         Compute the gradient g and Hessian H, then solve H dx = -g
         using the Cholesky decomposition: H = L L.T
-        
+
         Upon failure, approximate the Hessian by a scalar matrix,
         i.e. H = tr(H) / n Id
         """
         g = self.grad_f(self.x)
         H = self.hess_f(self.x)
-        try:  
+        try:
             L, _ = cho_factor(H, lower=0)
             dx = -cho_solve((L, 0), g)
         except:
@@ -165,11 +177,13 @@ class NewtonDescent(SteepestDescent):
 
 class QuasiNewtonDescent(SteepestDescent):
 
-    def __init__(self, x, f, grad_f, fix_hess_f, maxiter=None, tol=1e-7, verbose=False):
-        self._generic_init(x, f, grad_f, maxiter, tol, verbose)
+    def __init__(self, x, f, grad_f, fix_hess_f, maxiter=None, tol=1e-7,
+                 stepsize=1., adaptive=True, verbose=False):
+        self._generic_init(x, f, grad_f, maxiter, tol,
+                           stepsize, adaptive, verbose)
         self.Hinv = inv_sym_matrix(fix_hess_f)
         self.run()
-    
+
     def direction(self):
         g = self.grad_f(self.x)
         dx = -np.dot(self.Hinv, g)
@@ -191,11 +205,12 @@ class ScipyCG(object):
 
     def message(self):
         print('Scipy conjugate gradient implementation')
-    
+
 
 class ScipyNCG(object):
 
-    def __init__(self, x, f, grad_f, hess_f, maxiter=None, tol=1e-7, verbose=False):
+    def __init__(self, x, f, grad_f, hess_f, maxiter=None, tol=1e-7,
+                 verbose=False):
         t0 = time()
         stuff = fmin_ncg(f, x, grad_f, fhess=hess_f, args=(),
                          maxiter=maxiter, avextol=tol,
@@ -225,8 +240,8 @@ class ScipyBFGS(object):
 
     def message(self):
         print('Scipy BFGS quasi-Newton implementation')
-    
-    
+
+
 min_methods = {'steepest': SteepestDescent,
                'conjugate': ConjugateDescent,
                'newton': NewtonDescent,

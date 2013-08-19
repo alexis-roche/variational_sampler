@@ -1,9 +1,9 @@
 from time import time
-from warnings import warn
 import numpy as np
 
-from .numlib import safe_exp, inv_sym_matrix
-from .gaussian import (GaussianFamily,
+from .numlib import inv_sym_matrix
+from .gaussian import (Gaussian,
+                       GaussianFamily,
                        FactorGaussianFamily)
 
 
@@ -28,82 +28,62 @@ class LFit(object):
         self.family = families[family](self.dim)
 
         # Pre-compute some stuff and cache it
-        pw, self.logscale = safe_exp(self.sample.log_p + self.sample.log_w)
-        self._cache = {'F': self.family.design_matrix(sample.x),
-                       'pw': pw,
-                       'moment': None}
+        self._cache = {'F': self.family.design_matrix(sample.x)}
 
         # Perform fit
         self._do_fitting()
         self.time = time() - t0
 
     def _do_fitting(self):
-        F, pw = self._cache['F'], self._cache['pw']
-        moment = np.dot(F, pw) / self.npts
-        self._glob_fit = self.family.from_moment(moment)
-        scale = np.exp(self.logscale)
-        self._glob_fit.rescale(scale)
-        self._set_theta()
-        self._cache['moment'] = moment
+        F = self._cache['F']
+        self._integral = np.dot(F, self.sample.pe) / self.npts
+        self._integral *= np.exp(self.sample.logscale)
+        self._fit = self.family.from_integral(self._integral)
 
-    def _get_moment(self):
-        return np.exp(self.logscale) * self._cache['moment']
+    def _get_integral(self):
+        return self._integral
 
-    def _get_var_moment(self):
+    def _get_var_integral(self):
         """
-        Estimate variance on moment estimate
+        Estimate variance on integral estimate
         """
-        F, pw, moment = self._cache['F'], self._cache['pw'], self._cache['moment']
-        scale = np.exp(self.logscale)
-        var = np.dot(F * (pw ** 2), F.T) / self.npts \
-            - np.dot(moment.reshape(moment.size, 1), moment.reshape(1, moment.size))
-        var *= (scale ** 2 / self.npts)
+        F, pe, integral = self._cache['F'], self.sample.pe, self._integral
+        n = integral.size
+        var = np.dot(F * (pe ** 2), F.T) / self.npts \
+            - np.dot(integral.reshape(n, 1), integral.reshape(1, n))
+        var /= self.npts
         return var
 
-    def _set_theta(self):
-        if self.sample.context is None:
-            self._theta = self._glob_fit.theta
-        elif self.family.check(self.sample.context):
-            self._theta = self._glob_fit.theta - self.sample.context.theta
-        else:
-            try:
-                fit = self._glob_fit / self.sample.context
-                self._theta = fit.theta
-            except:
-                self._theta = None
+    def _get_fit(self):
+        return self._fit
 
     def _get_theta(self):
-        return self._theta
+        theta = self._fit.theta.copy()
+        theta -= self.sample.kernel.theta
+        return theta
 
-    def _get_fit(self):
-        if self.sample.context is None:
-            return self._glob_fit
-        elif self._theta is None:
-            warn('cannot divide fit with context')
-            return None
-        return self.family.from_theta(self.theta)
-
-    def _get_glob_fit(self):
-        return self._glob_fit
-
-    def _get_fisher_info(self):
+    def _get_sensitivity_matrix(self):
         F = self._cache['F']
-        q = np.nan_to_num(np.exp(np.dot(F.T, np.nan_to_num(self.theta))\
-                                     + self.sample.log_w))
-        return np.dot(F * q, F.T) / self.npts
+        # compute the fitted importance weights
+        log_qe = np.dot(F.T, self._fit.theta) +\
+            - self.sample.kernel.log(self.sample.x)
+        qe = np.exp(log_qe - self.sample.logscale)
+        return np.dot(F * qe, F.T) *\
+            (np.exp(self.sample.logscale) / self.npts)
 
     def _get_var_theta(self):
-        inv_fisher_info = inv_sym_matrix(self.fisher_info)
-        return np.dot(np.dot(inv_fisher_info, self.var_moment), inv_fisher_info)
+        inv_sensitivity_matrix = inv_sym_matrix(self.sensitivity_matrix)
+        return np.dot(np.dot(inv_sensitivity_matrix, self.var_integral),
+                      inv_sensitivity_matrix)
 
     def _get_kl_error(self):
-        return .5 * np.trace(self.var_moment * inv_sym_matrix(self.fisher_info))
+        return .5 * np.trace(np.dot(self.var_integral,
+                                    inv_sym_matrix(self.sensitivity_matrix)))
 
     theta = property(_get_theta)
     fit = property(_get_fit)
-    glob_fit = property(_get_glob_fit)
-    moment = property(_get_moment)
-    var_moment = property(_get_var_moment)
+    integral = property(_get_integral)
+    var_integral = property(_get_var_integral)
     var_theta = property(_get_var_theta)
-    fisher_info = property(_get_fisher_info)
+    sensitivity_matrix = property(_get_sensitivity_matrix)
     kl_error = property(_get_kl_error)

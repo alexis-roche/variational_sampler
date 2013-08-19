@@ -18,9 +18,8 @@ def _test_basic(vs, objective='kl'):
     f = vs.fit(objective=objective)
     print(f.theta)
     print(f.fit)
-    print(f.glob_fit)
-    print(f.var_moment)
-    print(f.fisher_info)
+    print(f.var_integral)
+    print(f.sensitivity_matrix)
     print(f.var_theta)
     print(f.kl_error)
 
@@ -30,24 +29,24 @@ def test1d_vs_basic():
 
 
 def test2d_vs_basic():
-    _test_basic(VariationalSampler(target, (np.zeros(2), np.eye(2)), 50, context='kernel'))
+    _test_basic(VariationalSampler(target, (np.zeros(2), np.eye(2)), 50))
 
 
 def test1d_is_basic():
-    _test_basic(VariationalSampler(target1d, (0, 1), 10, context='kernel'),
+    _test_basic(VariationalSampler(target1d, (0, 1), 10),
                 objective='l')
 
 
 def test2d_is_basic():
-    _test_basic(VariationalSampler(target, (np.zeros(2), np.eye(2)), 50, context='kernel'),
+    _test_basic(VariationalSampler(target, (np.zeros(2), np.eye(2)), 50),
                 objective='l')
 
 
 def test_loss():
-    vs = VariationalSampler(target1d, (0, 1), 10, context='kernel')
+    vs = VariationalSampler(target1d, (0, 1), 10)
     f = vs.fit()
-    f._cache['qw'][:] = 0
-    f._cache['log_q'][:] = -np.inf
+    f._cache['qe'][:] = 0
+    f._cache['log_qe'][:] = -np.inf
     f._cache['theta'] = None
     assert_equal(f._loss(None), np.inf)
     print(f._loss(np.array((0, 0, -2500))))
@@ -124,22 +123,16 @@ def test2d_is_constant_kernel():
 
 
 def test1d_vs_custom_kernel():
-    _test_basic(VariationalSampler(target1d, (1, 2), 10,
-                                   context=(0, 1)))
+    _test_basic(VariationalSampler(target1d, (1, 2), 10))
 
 
 def test2d_vs_custom_kernel():
-    _test_basic(VariationalSampler(target, (np.ones(2), 2 * np.eye(2)), 50,
-                                   context=(np.zeros(2), np.eye(2))))
+    _test_basic(VariationalSampler(target, (np.ones(2), 2 * np.eye(2)), 50))
 
 
 def test1d_is_custom_kernel():
-    _test_basic(VariationalSampler(target1d, (1, 2), 10,
-                                   context=(0, 1)),
-                objective='l')
+    _test_basic(VariationalSampler(target1d, (1, 2), 10))
                 
 
 def test2d_is_custom_kernel():
-    _test_basic(VariationalSampler(target, (np.ones(2), 2 * np.eye(2)), 50,
-                                  context=(np.zeros(2), np.eye(2))),
-                objective='l')
+    _test_basic(VariationalSampler(target, (np.ones(2), 2 * np.eye(2)), 50))

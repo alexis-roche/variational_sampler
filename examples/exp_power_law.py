@@ -11,7 +11,7 @@ BETA = 2
 NPTS = 5
 DV = 4
 DM = -2
-
+XMAX = 8
 
 def gauss_hermite_rule(npts, mk, vk):
     """
@@ -59,6 +59,6 @@ acronyms = ('VS', 'IS', 'BMC')
 colors = ('blue', 'red', 'green')
 legend = ('VS', 'direct', 'spline')
 plt.figure()
-display_fit(vs.x, target, (f_kl, f_l, f_gp), colors, legend)
+display_fit(vs.x, target, (f_kl, f_l, f_gp), colors, legend, xmax=XMAX)
 plt.figure()
-display_fit(vsd.x, target, (fd_kl, fd_l, fd_gp), colors, legend)
+display_fit(vsd.x, target, (fd_kl, fd_l, fd_gp), colors, legend, xmax=XMAX)

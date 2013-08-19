@@ -19,18 +19,17 @@ class GaussianMixture(object):
         self._moments()
 
     def _moments(self):
-
         Z = 0.0
         m = np.zeros(self._dim)
         V = np.zeros((self._dim, self._dim))
         for w, g in zip(self._weights, self._gaussians):
             Z += w * g.Z
             m += w * g.Z * g.m
-            V += w * g.Z * (g.V + np.dot(g.m, g.m.T))
-
+            V += w * g.Z * (g.V + np.dot(g.m.reshape((len(g.m), 1)),
+                                         g.m.reshape((1, len(g.m)))))
         Z_safe = force_tiny(Z)
         m /= Z_safe
-        V = V / Z_safe - np.dot(m, m.T)
+        V = V / Z_safe - np.dot(m.reshape((len(m), 1)), m.reshape((1, len(m))))
         self._Z = Z
         self._m = m
         self._V = V
