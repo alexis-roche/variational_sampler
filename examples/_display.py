@@ -25,6 +25,9 @@ def display_fit(xs, target, method, color=None, acronym=None):
         plt.legend(acronym)
     target_xs = np.exp(target(xs.squeeze()))
     target_x = np.exp(target(x.squeeze()))
-    plt.stem(xs.squeeze(), target_xs, linefmt='k-', markerfmt='ko')
+    plt.stem(xs.squeeze(), target_xs, linefmt='k-', markerfmt='ko',
+             basefmt='k-')
     plt.plot(x.squeeze(), target_x, 'k')
+    x0, x1, y0, y1 = plt.axis()
+    plt.plot((x0, x1), (0, 0), 'k')
     plt.show()
