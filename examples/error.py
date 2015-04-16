@@ -3,8 +3,8 @@ import pylab as plt
 from scipy.special.orthogonal import h_roots
 
 from variational_sampler import VariationalSampler
-from _toy_dist import ExponentialPowerLaw
-from _display import display_fit
+from variational_sampler.toy_dist import ExponentialPowerLaw
+from variational_sampler.display import display_fit
 
 BETA = 3
 DIM = 1

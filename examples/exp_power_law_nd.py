@@ -1,7 +1,7 @@
 import numpy as np
 from variational_sampler import VariationalSampler
 from variational_sampler.gaussian import Gaussian
-from _toy_dist import ExponentialPowerLaw
+from variational_sampler.toy_dist import ExponentialPowerLaw
 
 
 BETA = 3

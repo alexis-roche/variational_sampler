@@ -2,7 +2,7 @@ import numpy as np
 import pylab as plt
 from variational_sampler import VariationalSampler
 from variational_sampler.gaussian import Gaussian
-from _toy_dist import ExponentialPowerLaw
+from variational_sampler.toy_dist import ExponentialPowerLaw
 
 BETA = 3
 DIM = 5

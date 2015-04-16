@@ -3,8 +3,8 @@ import pylab as plt
 
 from variational_sampler import VariationalSampler
 from variational_sampler.gaussian import Gaussian
-from _toy_dist import ExponentialPowerLaw
-from _display import display_fit
+from variational_sampler.toy_dist import ExponentialPowerLaw
+from variational_sampler.display import display_fit
 
 DIM = 1
 NPTS = 100

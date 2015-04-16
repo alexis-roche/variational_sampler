@@ -1,3 +1,6 @@
+"""
+Implements VS using a steepest descent
+"""
 from time import time
 import numpy as np
 
